@@ -4,33 +4,48 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
+var (
+	upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+	listLock    sync.RWMutex
+	connections []connectionState
+)
 
 type websocketMessage struct {
 	MessageType string `json:"messageType"`
 	Data        string `json:"data"`
 }
+type connectionState struct {
+	websocket *threadSafeWriter
+}
+type threadSafeWriter struct {
+	*websocket.Conn
+	sync.Mutex
+}
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	unsafeConn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	conn := &threadSafeWriter{unsafeConn, sync.Mutex{}}
 	// Close the connection when the for-loop operation is finished.
 	defer conn.Close()
+	listLock.Lock()
+	connections = append(connections, connectionState{websocket: conn})
+	listLock.Unlock()
 
 	message := &websocketMessage{}
 	for {
-		messageType, raw, err := conn.ReadMessage()
+		_, raw, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
@@ -38,9 +53,14 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		log.Println("Type: " + strconv.Itoa(messageType) + " Data: " + message.Data)
-		conn.WriteJSON(message)
+		for _, c := range connections {
+			c.websocket.WriteJSON(message)
+		}
 	}
-	//client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
-	//client.hub.register <- client
+}
+func (t *threadSafeWriter) WriteJSON(v interface{}) error {
+	t.Lock()
+	defer t.Unlock()
+
+	return t.Conn.WriteJSON(v)
 }
