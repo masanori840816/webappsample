@@ -20,12 +20,13 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// "Must()" wraps "ParseFiles()" results, so I can put it into "templateHandler.templ" directly
 		t.templ = template.Must(template.ParseFiles(filepath.Join("templates", t.filename)))
 	})
-	t.templ.Execute(w, "Hello world")
+	t.templ.Execute(w, "ws://localhost:8080/websocket")
 }
 
 func main() {
 	http.Handle("/css/", http.FileServer(http.Dir("templates")))
 	http.Handle("/js/", http.FileServer(http.Dir("templates")))
+	http.HandleFunc("/websocket", websocketHandler)
 	// In this sample, "ServeHTTP()" is called twice.
 	// The second time is for loading "favicon.ico"
 	http.Handle("/", &templateHandler{filename: "index.html"})
