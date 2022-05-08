@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Server-Sent Events Sample</title>
+        <meta charset="utf-8">
+        <link href="css/site.css" rel="stylesheet" />
+    </head>
+    <body>
+        <div id="sample_message"></div>
+        <textarea id="input_message"></textarea>
+        <button onclick="Page.connect('{{.}}')">Connect</button>
+        <button onclick="Page.send()">Send</button>
+        <button onclick="Page.close()">Close</button>
+        <div id="received_text_area"></div>
+        <script src="/js/sse.page.js"></script>
+    </body>
+</html>
