@@ -25,14 +25,18 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	hub := *newSseHub()
+	go hub.run()
+
 	http.Handle("/css/", http.FileServer(http.Dir("templates")))
 	http.Handle("/js/", http.FileServer(http.Dir("templates")))
-	http.HandleFunc("/websocket", websocketHandler)
-	http.HandleFunc("/sse", sseHandler)
-	http.HandleFunc("/webreq", webRequestHandler)
+	http.HandleFunc("/sse/message", func(w http.ResponseWriter, r *http.Request) {
+		sendSseMessage(w, r, &hub)
+	})
+	http.HandleFunc("/sse", func(w http.ResponseWriter, r *http.Request) {
+		registerSseClient(w, r, &hub)
+	})
 
-	http.Handle("/pages/sse", &templateHandler{filename: "sse.html", serverUrl: "http://localhost:8080/sse"})
-	http.Handle("/pages/webreq", &templateHandler{filename: "webReq.html", serverUrl: "http://localhost:8080/webreq"})
-	http.Handle("/", &templateHandler{filename: "index.html", serverUrl: "ws://localhost:8080/websocket"})
+	http.Handle("/", &templateHandler{filename: "index.html", serverUrl: "http://localhost:8080/sse"})
 	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 }
