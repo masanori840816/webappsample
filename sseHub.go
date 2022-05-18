@@ -1,20 +1,26 @@
 package main
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/pion/webrtc/v3"
+)
 
 type SSEHub struct {
-	clients    map[*SSEClient]bool
-	broadcast  chan ClientMessage
-	register   chan *SSEClient
-	unregister chan *SSEClient
+	clients     map[*PeerConnectionState]bool
+	broadcast   chan ClientMessage
+	register    chan *PeerConnectionState
+	unregister  chan *PeerConnectionState
+	trackLocals map[string]*webrtc.TrackLocalStaticRTP
 }
 
 func newSSEHub() *SSEHub {
 	return &SSEHub{
-		clients:    make(map[*SSEClient]bool),
-		broadcast:  make(chan ClientMessage),
-		register:   make(chan *SSEClient),
-		unregister: make(chan *SSEClient),
+		clients:     make(map[*PeerConnectionState]bool),
+		broadcast:   make(chan ClientMessage),
+		register:    make(chan *PeerConnectionState),
+		unregister:  make(chan *PeerConnectionState),
+		trackLocals: map[string]*webrtc.TrackLocalStaticRTP{},
 	}
 }
 func (h *SSEHub) run() {
@@ -24,7 +30,10 @@ func (h *SSEHub) run() {
 			h.clients[client] = true
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
-				close(client.messageChan)
+				client.client.CloseAllChannels()
+				if client.peerConnection.ConnectionState() == webrtc.PeerConnectionStateConnected {
+					client.peerConnection.Close()
+				}
 				delete(h.clients, client)
 			}
 		case message := <-h.broadcast:
@@ -32,13 +41,16 @@ func (h *SSEHub) run() {
 			jsonText := string(m)
 
 			for client := range h.clients {
-				if client.userName == message.UserName {
+				if client.client.userName == message.UserName {
 					continue
 				}
 				select {
-				case client.messageChan <- jsonText:
+				case client.client.messageChan <- jsonText:
 				default:
-					close(client.messageChan)
+					client.client.CloseAllChannels()
+					if client.peerConnection.ConnectionState() == webrtc.PeerConnectionStateConnected {
+						client.peerConnection.Close()
+					}
 					delete(h.clients, client)
 				}
 			}

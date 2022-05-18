@@ -6,11 +6,32 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/pion/webrtc/v3"
 )
 
 type SSEClient struct {
-	messageChan chan string
-	userName    string
+	messageChan         chan string
+	candidateChan       chan *webrtc.ICECandidate
+	connectionStateChan chan webrtc.PeerConnectionState
+	trackChan           chan *webrtc.TrackRemote
+	userName            string
+}
+
+func (c *SSEClient) CloseAllChannels() {
+	close(c.messageChan)
+	close(c.candidateChan)
+	close(c.connectionStateChan)
+	close(c.trackChan)
+}
+func newSSEClient(userName string) *SSEClient {
+	return &SSEClient{
+		messageChan:         make(chan string),
+		candidateChan:       make(chan *webrtc.ICECandidate),
+		connectionStateChan: make(chan webrtc.PeerConnectionState),
+		trackChan:           make(chan *webrtc.TrackRemote),
+		userName:            userName,
+	}
 }
 
 func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
@@ -20,17 +41,23 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		fmt.Fprint(w, "The parameters have no names")
 		return
 	}
+	newClient := newSSEClient(userName)
+	ps, err := NewPeerConnectionState(newClient)
+	if err != nil {
+		log.Println(err.Error())
+		fmt.Fprint(w, "Failed connection")
+		return
+	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	// For pushing data to clients, I call "flusher.Flush()"
 	flusher, _ := w.(http.Flusher)
 
-	newClient := SSEClient{messageChan: make(chan string), userName: userName}
-	hub.register <- &newClient
+	hub.register <- ps
 
 	defer func() {
-		hub.unregister <- &newClient
+		hub.unregister <- ps
 	}()
 	for {
 		select {
@@ -41,6 +68,12 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 
 			// Flush the data immediatly instead of buffering it for later.
 			flusher.Flush()
+		case candidate := <-newClient.candidateChan:
+			log.Println(candidate)
+		case connectionState := <-newClient.connectionStateChan:
+			log.Println(connectionState)
+		case track := <-newClient.trackChan:
+			log.Println(track)
 		case <-r.Context().Done():
 			// when "es.close()" is called, this loop operation will be ended.
 			return
