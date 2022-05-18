@@ -69,11 +69,54 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 			// Flush the data immediatly instead of buffering it for later.
 			flusher.Flush()
 		case candidate := <-newClient.candidateChan:
-			log.Println(candidate)
+			if candidate == nil {
+				return
+			}
+
+			candidateString, err := json.Marshal(candidate.ToJSON())
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			message := &ClientMessage{
+				Event:    "candidate",
+				UserName: newClient.userName,
+				Data:     string(candidateString),
+			}
+			jsonValue, _ := json.Marshal(message)
+			fmt.Fprintf(w, "data: %s\n\n", string(jsonValue))
+
+			flusher.Flush()
 		case connectionState := <-newClient.connectionStateChan:
-			log.Println(connectionState)
+			switch connectionState {
+			case webrtc.PeerConnectionStateFailed:
+				if err := ps.peerConnection.Close(); err != nil {
+					log.Print(err)
+				}
+				//case webrtc.PeerConnectionStateClosed:
+				//	signalPeerConnections()
+			}
 		case track := <-newClient.trackChan:
-			log.Println(track)
+			trackLocal, err := generateTrackLocalStaticRTP(track)
+			if err != nil {
+				panic(err)
+			}
+			hub.addTrack <- trackLocal
+			defer func() {
+				hub.removeTrack <- trackLocal
+			}()
+
+			buf := make([]byte, 1500)
+			for {
+				i, _, err := track.Read(buf)
+				if err != nil {
+					return
+				}
+
+				if _, err = trackLocal.Write(buf[:i]); err != nil {
+					return
+				}
+			}
 		case <-r.Context().Done():
 			// when "es.close()" is called, this loop operation will be ended.
 			return
