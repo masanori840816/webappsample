@@ -13,7 +13,7 @@ type SSEClient struct {
 	userName    string
 }
 
-func registerSseClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
+func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	userName, err := getParam(r, "user")
 	if err != nil {
 		log.Println(err.Error())
@@ -47,7 +47,7 @@ func registerSseClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		}
 	}
 }
-func sendSseMessage(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
+func sendSSEMessage(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	returnValue := &ActionResult{}
 	w.Header().Set("Content-Type", "application/json")
 	body, err := ioutil.ReadAll(r.Body)
