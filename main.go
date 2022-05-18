@@ -25,7 +25,7 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	hub := *newSseHub()
+	hub := *newSSEHub()
 	go hub.run()
 
 	http.Handle("/css/", http.FileServer(http.Dir("templates")))

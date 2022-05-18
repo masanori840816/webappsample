@@ -2,22 +2,22 @@ package main
 
 import "encoding/json"
 
-type SseHub struct {
-	clients    map[*SseClient]bool
+type SSEHub struct {
+	clients    map[*SSEClient]bool
 	broadcast  chan ClientMessage
-	register   chan *SseClient
-	unregister chan *SseClient
+	register   chan *SSEClient
+	unregister chan *SSEClient
 }
 
-func newSseHub() *SseHub {
-	return &SseHub{
-		clients:    make(map[*SseClient]bool),
+func newSSEHub() *SSEHub {
+	return &SSEHub{
+		clients:    make(map[*SSEClient]bool),
 		broadcast:  make(chan ClientMessage),
-		register:   make(chan *SseClient),
-		unregister: make(chan *SseClient),
+		register:   make(chan *SSEClient),
+		unregister: make(chan *SSEClient),
 	}
 }
-func (h *SseHub) run() {
+func (h *SSEHub) run() {
 	for {
 		select {
 		case client := <-h.register:

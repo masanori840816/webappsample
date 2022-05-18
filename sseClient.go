@@ -8,12 +8,12 @@ import (
 	"net/http"
 )
 
-type SseClient struct {
+type SSEClient struct {
 	messageChan chan string
 	userName    string
 }
 
-func registerSseClient(w http.ResponseWriter, r *http.Request, hub *SseHub) {
+func registerSseClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	userName, err := getParam(r, "user")
 	if err != nil {
 		log.Println(err.Error())
@@ -26,7 +26,7 @@ func registerSseClient(w http.ResponseWriter, r *http.Request, hub *SseHub) {
 	// For pushing data to clients, I call "flusher.Flush()"
 	flusher, _ := w.(http.Flusher)
 
-	newClient := SseClient{messageChan: make(chan string), userName: userName}
+	newClient := SSEClient{messageChan: make(chan string), userName: userName}
 	hub.register <- &newClient
 
 	defer func() {
@@ -47,7 +47,7 @@ func registerSseClient(w http.ResponseWriter, r *http.Request, hub *SseHub) {
 		}
 	}
 }
-func sendSseMessage(w http.ResponseWriter, r *http.Request, hub *SseHub) {
+func sendSseMessage(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	returnValue := &ActionResult{}
 	w.Header().Set("Content-Type", "application/json")
 	body, err := ioutil.ReadAll(r.Body)
