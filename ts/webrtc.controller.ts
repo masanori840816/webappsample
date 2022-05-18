@@ -1,10 +1,8 @@
-import { CandidateMessage, VideoOfferMessage, VideoAnswerMessage } from "./webrtc.type";
-
 export class WebRtcController {
     private webcamStream: MediaStream|null = null; 
     private peerConnection: RTCPeerConnection|null = null;
-    private answerSentEvent: ((message: VideoAnswerMessage) => void)|null = null;
-    private candidateSentEvent: ((message: CandidateMessage) => void)|null = null;
+    private answerSentEvent: ((data: RTCSessionDescriptionInit) => void)|null = null;
+    private candidateSentEvent: ((data: RTCIceCandidate) => void)|null = null;
     public init() {
         const localVideo = document.getElementById("local_video") as HTMLVideoElement;
         localVideo.addEventListener("canplay", () => {
@@ -57,37 +55,37 @@ export class WebRtcController {
                 this.candidateSentEvent == null) {
               return;
             }
-            this.candidateSentEvent({event: "candidate", data: ev.candidate });
+            this.candidateSentEvent(ev.candidate);
         };
     }
-    public addEvents(answerSentEvent: (message: VideoAnswerMessage) => void,
-        candidateSentEvent: (message: CandidateMessage) => void) {
+    public addEvents(answerSentEvent: (data: RTCSessionDescriptionInit) => void,
+        candidateSentEvent: (data: RTCIceCandidate) => void) {
         this.answerSentEvent = answerSentEvent;
         this.candidateSentEvent = candidateSentEvent;
     }
-    public handleOffer(message: VideoOfferMessage) {
+    public handleOffer(data: RTCSessionDescription|null|undefined) {
         if(this.peerConnection == null ||
-                message?.data == null) {
+                data == null) {
             console.error("PeerConnection|SDP was null");
             return;
         }
-        this.peerConnection.setRemoteDescription(message.data)
+        this.peerConnection.setRemoteDescription(data);
         this.peerConnection.createAnswer()
             .then(answer => {
                 if(this.peerConnection != null) {
                     this.peerConnection.setLocalDescription(answer);
                 }
                 if(this.answerSentEvent != null) {
-                    this.answerSentEvent({event: "answer", data: answer});
+                    this.answerSentEvent(answer);
                 }
             });
     }
-    public handleCandidate(message: CandidateMessage) {
+    public handleCandidate(data: RTCIceCandidate|null|undefined) {
         if(this.peerConnection == null ||
-            message?.data == null) {
+            data == null) {
             console.error("PeerConnection|Candidate was null");
             return;
         }
-        this.peerConnection.addIceCandidate(message.data);
+        this.peerConnection.addIceCandidate(data);
     }
 }

@@ -1,10 +1,12 @@
 import { hasAnyTexts } from "./hasAnyTexts";
+import { MainView } from "./main.view";
 import { SseController } from "./sse.controller";
 import { WebRtcController } from "./webrtc.controller";
-import { CandidateMessage, ClientMessage, VideoAnswerMessage } from "./webrtc.type";
+import { ClientMessage } from "./webrtc.type";
 
 let sse: SseController;
 let webrtc: WebRtcController;
+let view: MainView;
 let userName = ""
 export function connect(): void {
     const userNameInput = document.getElementById("user_name") as HTMLInputElement;
@@ -30,43 +32,41 @@ function init() {
     webrtc.addEvents((message) => sendAnswer(message),
         (message) => sendCandidate(message));
     webrtc.init();
+    view = new MainView();
 }
 function handleReceivedMessage(value: string) {
-    if(!checkIsClientMessage(value)) {
+    const message = JSON.parse(value);
+    if(!checkIsClientMessage(message)) {
         console.error(`Invalid message type ${value}`);
         return;
     }
-    switch(value.event) {
+    switch(message.event) {
         case "text":
-            console.log("Text");
-            console.log(value.data);
+            view.addReceivedText({ user: message.userName, message: message.data });
             break;
         case "offer":
             console.log("Offer");
-            webrtc.handleOffer({event: "offer", data: JSON.parse(value.data)});
-            break;
-        case "answer":
-            console.log("Answer");
+            webrtc.handleOffer(JSON.parse(message.data));
             break;
         case "candidate":
             console.log("Candidate");
-            webrtc.handleCandidate({ event: "candidate", data: JSON.parse(value.data) });
+            webrtc.handleCandidate(JSON.parse(message.data));
             break;
     }
     console.log(value);
     
 }
-function sendAnswer(message: VideoAnswerMessage) {
+function sendAnswer(data: RTCSessionDescriptionInit) {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: message.event, data: JSON.stringify(message.data)});
+    sse.sendMessage({userName, event: "answer", data: JSON.stringify(data)});
 }
-function sendCandidate(message: CandidateMessage) {
+function sendCandidate(data: RTCIceCandidate) {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: message.event, data: JSON.stringify(message.data)});
+    sse.sendMessage({userName, event: "candidate", data: JSON.stringify(data)});
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function checkIsClientMessage(value: any): value is ClientMessage {
