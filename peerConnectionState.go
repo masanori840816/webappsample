@@ -32,16 +32,28 @@ func NewPeerConnectionState(client *SSEClient) (*PeerConnectionState, error) {
 		}
 	}
 	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
+		if i == nil {
+			return
+		}
 		log.Println("OnICECandidate")
-		client.candidateChan <- i
+		_, ok := <-client.candidateChan
+		if ok {
+			client.candidateChan <- i
+		}
 	})
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
 		log.Println("OnConnectionStateChange")
-		client.connectionStateChan <- p
+		_, ok := <-client.changeConnectionState
+		if ok {
+			client.changeConnectionState <- p
+		}
 	})
 	peerConnection.OnTrack(func(t *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
 		log.Println("OnTrack")
-		client.trackChan <- t
+		_, ok := <-client.addTrack
+		if ok {
+			client.addTrack <- t
+		}
 	})
 
 	return &PeerConnectionState{

@@ -13,8 +13,7 @@ type SSEHub struct {
 	register    chan *PeerConnectionState
 	unregister  chan *PeerConnectionState
 	trackLocals map[string]*webrtc.TrackLocalStaticRTP
-	addTrack    chan *webrtc.TrackLocalStaticRTP
-	removeTrack chan *webrtc.TrackLocalStaticRTP
+	addTrack    chan *webrtc.TrackRemote
 }
 
 func newSSEHub() *SSEHub {
@@ -24,11 +23,10 @@ func newSSEHub() *SSEHub {
 		register:    make(chan *PeerConnectionState),
 		unregister:  make(chan *PeerConnectionState),
 		trackLocals: map[string]*webrtc.TrackLocalStaticRTP{},
-		addTrack:    make(chan *webrtc.TrackLocalStaticRTP),
-		removeTrack: make(chan *webrtc.TrackLocalStaticRTP),
+		addTrack:    make(chan *webrtc.TrackRemote),
 	}
 }
-func generateTrackLocalStaticRTP(track *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
+func newTrackLocalStaticRTP(track *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
 	return webrtc.NewTrackLocalStaticRTP(track.Codec().RTPCodecCapability, track.ID(), track.StreamID())
 }
 func (h *SSEHub) run() {
@@ -41,42 +39,106 @@ func (h *SSEHub) run() {
 			if _, ok := h.clients[client]; ok {
 				client.client.CloseAllChannels()
 				if client.peerConnection.ConnectionState() == webrtc.PeerConnectionStateConnected {
+					log.Println("close after unregister")
 					client.peerConnection.Close()
 				}
 				delete(h.clients, client)
 				signalPeerConnections(h)
 			}
 		case track := <-h.addTrack:
-			h.trackLocals[track.ID()] = track
-			signalPeerConnections(h)
-		case track := <-h.removeTrack:
-			delete(h.trackLocals, track.ID())
-			signalPeerConnections(h)
-		case message := <-h.broadcast:
-			m, _ := json.Marshal(message)
-			jsonText := string(m)
-
-			for client := range h.clients {
-				select {
-				case client.client.messageChan <- jsonText:
-				default:
-					client.client.CloseAllChannels()
-					if client.peerConnection.ConnectionState() == webrtc.PeerConnectionStateConnected {
-						client.peerConnection.Close()
-					}
-					delete(h.clients, client)
-				}
+			trackLocal, err := newTrackLocalStaticRTP(track)
+			if err != nil {
+				log.Println(err.Error())
+				return
 			}
+			h.trackLocals[track.ID()] = trackLocal
+			signalPeerConnections(h)
+			defer func() {
+				log.Println("delete tracks")
+				delete(h.trackLocals, track.ID())
+				signalPeerConnections(h)
+			}()
+			go updateTrackValue(track, trackLocal)
+
+		case message := <-h.broadcast:
+			log.Println("MMMMEssage")
+			handleReceivedMessage(h, message)
 		}
 	}
 }
+func updateTrackValue(track *webrtc.TrackRemote, trackLocal *webrtc.TrackLocalStaticRTP) {
+	buf := make([]byte, 1500)
+
+	for {
+		i, _, err := track.Read(buf)
+		if err != nil {
+			return
+		}
+
+		if _, err = trackLocal.Write(buf[:i]); err != nil {
+			return
+		}
+	}
+}
+func handleReceivedMessage(h *SSEHub, message ClientMessage) {
+	switch message.Event {
+	case TextEvent:
+		m, _ := json.Marshal(message)
+		jsonText := string(m)
+
+		for client := range h.clients {
+			select {
+			case client.client.sendMessage <- jsonText:
+			default:
+				client.client.CloseAllChannels()
+				if client.peerConnection.ConnectionState() == webrtc.PeerConnectionStateConnected {
+					client.peerConnection.Close()
+				}
+				delete(h.clients, client)
+			}
+		}
+	case CandidateEvent:
+		candidate := webrtc.ICECandidateInit{}
+		if err := json.Unmarshal([]byte(message.Data), &candidate); err != nil {
+			log.Println(err)
+			return
+		}
+		for pc := range h.clients {
+			if pc.client.userName == message.UserName {
+				if err := pc.peerConnection.AddICECandidate(candidate); err != nil {
+					log.Println(err)
+					return
+				}
+			}
+		}
+	case AnswerEvent:
+		answer := webrtc.SessionDescription{}
+		if err := json.Unmarshal([]byte(message.Data), &answer); err != nil {
+			log.Println(err)
+			return
+		}
+		for pc := range h.clients {
+			if pc.client.userName == message.UserName {
+				if err := pc.peerConnection.SetRemoteDescription(answer); err != nil {
+					log.Println(err)
+					return
+				}
+			}
+		}
+
+	}
+}
 func signalPeerConnections(h *SSEHub) {
+	log.Println("signalPeerConnections")
 	for ps := range h.clients {
 		if ps.peerConnection.ConnectionState() == webrtc.PeerConnectionStateClosed {
 			delete(h.clients, ps)
 			// We modified the slice, start from the beginning
 			signalPeerConnections(h)
+
+			log.Println("state closed")
 		}
+		log.Println("signalPeerConnections1")
 
 		existingSenders := map[string]bool{}
 
@@ -84,7 +146,7 @@ func signalPeerConnections(h *SSEHub) {
 			if sender.Track() == nil {
 				continue
 			}
-
+			log.Println("sender " + sender.Track().ID())
 			existingSenders[sender.Track().ID()] = true
 
 			if _, ok := h.trackLocals[sender.Track().ID()]; !ok {
@@ -94,6 +156,7 @@ func signalPeerConnections(h *SSEHub) {
 				}
 			}
 		}
+		log.Println("signalPeerConnections3")
 
 		for _, receiver := range ps.peerConnection.GetReceivers() {
 			if receiver.Track() == nil {
@@ -102,6 +165,7 @@ func signalPeerConnections(h *SSEHub) {
 
 			existingSenders[receiver.Track().ID()] = true
 		}
+		log.Println("signalPeerConnections4")
 
 		for trackID := range h.trackLocals {
 			if _, ok := existingSenders[trackID]; !ok {
@@ -111,6 +175,7 @@ func signalPeerConnections(h *SSEHub) {
 				}
 			}
 		}
+		log.Println("signalPeerConnections555")
 
 		offer, err := ps.peerConnection.CreateOffer(nil)
 		if err != nil {
@@ -127,6 +192,9 @@ func signalPeerConnections(h *SSEHub) {
 			log.Println(err.Error())
 			return
 		}
-		ps.client.messageChan <- messageJSON
+
+		log.Println("signalPeerConnections3")
+		ps.client.sendMessage <- messageJSON
+		log.Println("signalPeerConnections4")
 	}
 }

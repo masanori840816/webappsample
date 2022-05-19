@@ -11,26 +11,26 @@ import (
 )
 
 type SSEClient struct {
-	messageChan         chan string
-	candidateChan       chan *webrtc.ICECandidate
-	connectionStateChan chan webrtc.PeerConnectionState
-	trackChan           chan *webrtc.TrackRemote
-	userName            string
+	sendMessage           chan string
+	candidateChan         chan *webrtc.ICECandidate
+	changeConnectionState chan webrtc.PeerConnectionState
+	addTrack              chan *webrtc.TrackRemote
+	userName              string
 }
 
 func (c *SSEClient) CloseAllChannels() {
-	close(c.messageChan)
+	close(c.sendMessage)
 	close(c.candidateChan)
-	close(c.connectionStateChan)
-	close(c.trackChan)
+	close(c.changeConnectionState)
+	close(c.addTrack)
 }
 func newSSEClient(userName string) *SSEClient {
 	return &SSEClient{
-		messageChan:         make(chan string),
-		candidateChan:       make(chan *webrtc.ICECandidate),
-		connectionStateChan: make(chan webrtc.PeerConnectionState),
-		trackChan:           make(chan *webrtc.TrackRemote),
-		userName:            userName,
+		sendMessage:           make(chan string),
+		candidateChan:         make(chan *webrtc.ICECandidate),
+		changeConnectionState: make(chan webrtc.PeerConnectionState),
+		addTrack:              make(chan *webrtc.TrackRemote),
+		userName:              userName,
 	}
 }
 
@@ -61,7 +61,7 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	}()
 	for {
 		select {
-		case message := <-newClient.messageChan:
+		case message := <-newClient.sendMessage:
 			// push received messages to clients
 			// This format must be like "data: {value}\n\n" or clients can't be gotten the value.
 			fmt.Fprintf(w, "data: %s\n\n", message)
@@ -69,25 +69,16 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 			// Flush the data immediatly instead of buffering it for later.
 			flusher.Flush()
 		case candidate := <-newClient.candidateChan:
-			if candidate == nil {
-				return
-			}
-
-			candidateString, err := json.Marshal(candidate.ToJSON())
+			jsonValue, err := NewCandidateMessageJSON(newClient.userName, candidate)
 			if err != nil {
-				log.Println(err)
+				log.Println(err.Error())
 				return
 			}
-			message := &ClientMessage{
-				Event:    "candidate",
-				UserName: newClient.userName,
-				Data:     string(candidateString),
-			}
-			jsonValue, _ := json.Marshal(message)
-			fmt.Fprintf(w, "data: %s\n\n", string(jsonValue))
-
+			fmt.Fprintf(w, "data: %s\n\n", jsonValue)
 			flusher.Flush()
-		case connectionState := <-newClient.connectionStateChan:
+		case track := <-newClient.addTrack:
+			hub.addTrack <- track
+		case connectionState := <-newClient.changeConnectionState:
 			switch connectionState {
 			case webrtc.PeerConnectionStateFailed:
 				if err := ps.peerConnection.Close(); err != nil {
@@ -95,27 +86,6 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 				}
 			case webrtc.PeerConnectionStateClosed:
 				signalPeerConnections(hub)
-			}
-		case track := <-newClient.trackChan:
-			trackLocal, err := generateTrackLocalStaticRTP(track)
-			if err != nil {
-				panic(err)
-			}
-			hub.addTrack <- trackLocal
-			defer func() {
-				hub.removeTrack <- trackLocal
-			}()
-
-			buf := make([]byte, 1500)
-			for {
-				i, _, err := track.Read(buf)
-				if err != nil {
-					return
-				}
-
-				if _, err = trackLocal.Write(buf[:i]); err != nil {
-					return
-				}
 			}
 		case <-r.Context().Done():
 			// when "es.close()" is called, this loop operation will be ended.
@@ -127,6 +97,7 @@ func sendSSEMessage(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	returnValue := &ActionResult{}
 	w.Header().Set("Content-Type", "application/json")
 	body, err := ioutil.ReadAll(r.Body)
+
 	if err != nil {
 		log.Println(err.Error())
 		returnValue.Succeeded = false
@@ -146,9 +117,14 @@ func sendSSEMessage(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		return
 	}
 	w.WriteHeader(200)
+
+	log.Println("sendMessage 4")
 	hub.broadcast <- *message
 
+	log.Println("sendMessage 5")
 	returnValue.Succeeded = true
 	data, _ := json.Marshal(returnValue)
 	w.Write(data)
+
+	log.Println("sendMessage 6")
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/pion/webrtc/v3"
 )
@@ -31,13 +32,39 @@ func NewOfferMessage(userName string, offer webrtc.SessionDescription) (*ClientM
 	}, nil
 }
 func NewOfferMessageJSON(userName string, offer webrtc.SessionDescription) (string, error) {
-	offerMessage, err := NewOfferMessage(userName, offer)
+	message, err := NewOfferMessage(userName, offer)
 	if err != nil {
 		return "", err
 	}
-	offerJSON, err := json.Marshal(offerMessage)
+	jsonValue, err := json.Marshal(message)
 	if err != nil {
 		return "", err
 	}
-	return string(offerJSON), nil
+	return string(jsonValue), nil
+}
+func NewCandidateMessage(userName string, candidate *webrtc.ICECandidate) (*ClientMessage, error) {
+	if candidate == nil {
+		return nil, errors.New("ICECandidate was null")
+	}
+
+	candidateString, err := json.Marshal(candidate.ToJSON())
+	if err != nil {
+		return nil, err
+	}
+	return &ClientMessage{
+		Event:    CandidateEvent,
+		UserName: userName,
+		Data:     string(candidateString),
+	}, nil
+}
+func NewCandidateMessageJSON(userName string, candidate *webrtc.ICECandidate) (string, error) {
+	message, err := NewCandidateMessage(userName, candidate)
+	if err != nil {
+		return "", err
+	}
+	jsonValue, err := json.Marshal(message)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonValue), nil
 }

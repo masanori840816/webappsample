@@ -56,6 +56,9 @@ export class WebRtcController {
             return;
         }
         this.peerConnection = new RTCPeerConnection();
+
+        this.peerConnection.onconnectionstatechange = (ev) => console.log(ev);
+        
         this.peerConnection.ontrack = (ev) => {
             if (ev.track.kind === "audio" ||
                 ev.streams[0] == null) {
