@@ -26,8 +26,7 @@ export function close() {
 }
 function init() {
     sse = new SseController();
-    sse.addEvents(() => webrtc.connect(),
-        (value) => handleReceivedMessage(value));
+    sse.addEvents((value) => handleReceivedMessage(value));
     webrtc = new WebRtcController();
     webrtc.addEvents((message) => sendAnswer(message),
         (message) => sendCandidate(message));

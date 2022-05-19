@@ -16,10 +16,41 @@ export class WebRtcController {
               localVideo.srcObject = stream;
               localVideo.play();
               this.webcamStream = stream;
+              this.connect();
           })
           .catch(err => console.error(`An error occurred: ${err}`));
     }
-    public connect() {
+    public addEvents(answerSentEvent: (data: RTCSessionDescriptionInit) => void,
+        candidateSentEvent: (data: RTCIceCandidate) => void) {
+        this.answerSentEvent = answerSentEvent;
+        this.candidateSentEvent = candidateSentEvent;
+    }
+    public handleOffer(data: RTCSessionDescription|null|undefined) {
+        if(this.peerConnection == null ||
+                data == null) {
+            console.error("PeerConnection|SDP was null");
+            return;
+        }
+        this.peerConnection.setRemoteDescription(data);
+        this.peerConnection.createAnswer()
+            .then(answer => {
+                if(this.peerConnection != null) {
+                    this.peerConnection.setLocalDescription(answer);
+                }
+                if(this.answerSentEvent != null) {
+                    this.answerSentEvent(answer);
+                }
+            });
+    }
+    public handleCandidate(data: RTCIceCandidate|null|undefined) {
+        if(this.peerConnection == null ||
+            data == null) {
+            console.error("PeerConnection|Candidate was null");
+            return;
+        }
+        this.peerConnection.addIceCandidate(data);
+    }
+    private connect() {
         if(this.webcamStream == null) {
             console.error("Local video was null");
             return;
@@ -58,34 +89,5 @@ export class WebRtcController {
             this.candidateSentEvent(ev.candidate);
         };
     }
-    public addEvents(answerSentEvent: (data: RTCSessionDescriptionInit) => void,
-        candidateSentEvent: (data: RTCIceCandidate) => void) {
-        this.answerSentEvent = answerSentEvent;
-        this.candidateSentEvent = candidateSentEvent;
-    }
-    public handleOffer(data: RTCSessionDescription|null|undefined) {
-        if(this.peerConnection == null ||
-                data == null) {
-            console.error("PeerConnection|SDP was null");
-            return;
-        }
-        this.peerConnection.setRemoteDescription(data);
-        this.peerConnection.createAnswer()
-            .then(answer => {
-                if(this.peerConnection != null) {
-                    this.peerConnection.setLocalDescription(answer);
-                }
-                if(this.answerSentEvent != null) {
-                    this.answerSentEvent(answer);
-                }
-            });
-    }
-    public handleCandidate(data: RTCIceCandidate|null|undefined) {
-        if(this.peerConnection == null ||
-            data == null) {
-            console.error("PeerConnection|Candidate was null");
-            return;
-        }
-        this.peerConnection.addIceCandidate(data);
-    }
+    
 }

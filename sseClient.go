@@ -93,8 +93,8 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 				if err := ps.peerConnection.Close(); err != nil {
 					log.Print(err)
 				}
-				//case webrtc.PeerConnectionStateClosed:
-				//	signalPeerConnections()
+			case webrtc.PeerConnectionStateClosed:
+				signalPeerConnections(hub)
 			}
 		case track := <-newClient.trackChan:
 			trackLocal, err := generateTrackLocalStaticRTP(track)
