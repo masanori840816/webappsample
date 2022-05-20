@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"github.com/pion/webrtc/v3"
 )
 
@@ -12,7 +10,7 @@ type PeerConnectionState struct {
 }
 
 func NewPeerConnectionState(client *SSEClient) (*PeerConnectionState, error) {
-	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{
+	/*peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
 				URLs: []string{
@@ -20,7 +18,8 @@ func NewPeerConnectionState(client *SSEClient) (*PeerConnectionState, error) {
 				},
 			},
 		},
-	})
+	})*/
+	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{})
 	if err != nil {
 		return nil, err
 	}
@@ -35,25 +34,22 @@ func NewPeerConnectionState(client *SSEClient) (*PeerConnectionState, error) {
 		if i == nil {
 			return
 		}
-		log.Println("OnICECandidate")
-		_, ok := <-client.candidateChan
-		if ok {
-			client.candidateChan <- i
-		}
+		//_, ok := <-client.candidateChan
+		//if ok {
+		client.candidateChan <- i
+		//}
 	})
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
-		log.Println("OnConnectionStateChange")
-		_, ok := <-client.changeConnectionState
-		if ok {
-			client.changeConnectionState <- p
-		}
+		//_, ok := <-client.changeConnectionState
+		//if ok {
+		client.changeConnectionState <- p
+		//}
 	})
 	peerConnection.OnTrack(func(t *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
-		log.Println("OnTrack")
-		_, ok := <-client.addTrack
-		if ok {
-			client.addTrack <- t
-		}
+		//_, ok := <-client.addTrack
+		//if ok {
+		client.addTrack <- t
+		//}
 	})
 
 	return &PeerConnectionState{

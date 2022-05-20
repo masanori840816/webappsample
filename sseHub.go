@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
+	"time"
 
 	"github.com/pion/webrtc/v3"
 )
@@ -37,9 +40,7 @@ func (h *SSEHub) run() {
 			signalPeerConnections(h)
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
-				client.client.CloseAllChannels()
 				if client.peerConnection.ConnectionState() == webrtc.PeerConnectionStateConnected {
-					log.Println("close after unregister")
 					client.peerConnection.Close()
 				}
 				delete(h.clients, client)
@@ -54,14 +55,12 @@ func (h *SSEHub) run() {
 			h.trackLocals[track.ID()] = trackLocal
 			signalPeerConnections(h)
 			defer func() {
-				log.Println("delete tracks")
 				delete(h.trackLocals, track.ID())
 				signalPeerConnections(h)
 			}()
 			go updateTrackValue(track, trackLocal)
 
 		case message := <-h.broadcast:
-			log.Println("MMMMEssage")
 			handleReceivedMessage(h, message)
 		}
 	}
@@ -87,15 +86,10 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 		jsonText := string(m)
 
 		for client := range h.clients {
-			select {
-			case client.client.sendMessage <- jsonText:
-			default:
-				client.client.CloseAllChannels()
-				if client.peerConnection.ConnectionState() == webrtc.PeerConnectionStateConnected {
-					client.peerConnection.Close()
-				}
-				delete(h.clients, client)
-			}
+			flusher, _ := client.client.w.(http.Flusher)
+
+			fmt.Fprintf(client.client.w, "data: %s\n\n", jsonText)
+			flusher.Flush()
 		}
 	case CandidateEvent:
 		candidate := webrtc.ICECandidateInit{}
@@ -129,72 +123,77 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 	}
 }
 func signalPeerConnections(h *SSEHub) {
-	log.Println("signalPeerConnections")
+	for syncAttempt := 0; ; syncAttempt++ {
+		if syncAttempt == 25 {
+			// Release the lock and attempt a sync in 3 seconds. We might be blocking a RemoveTrack or AddTrack
+			go func() {
+				time.Sleep(time.Second * 3)
+				signalPeerConnections(h)
+			}()
+			return
+		}
+
+		if !attemptSync(h) {
+			break
+		}
+	}
+}
+func attemptSync(h *SSEHub) bool {
 	for ps := range h.clients {
 		if ps.peerConnection.ConnectionState() == webrtc.PeerConnectionStateClosed {
 			delete(h.clients, ps)
 			// We modified the slice, start from the beginning
-			signalPeerConnections(h)
-
-			log.Println("state closed")
+			return true
 		}
-		log.Println("signalPeerConnections1")
-
 		existingSenders := map[string]bool{}
 
 		for _, sender := range ps.peerConnection.GetSenders() {
 			if sender.Track() == nil {
 				continue
 			}
-			log.Println("sender " + sender.Track().ID())
 			existingSenders[sender.Track().ID()] = true
 
 			if _, ok := h.trackLocals[sender.Track().ID()]; !ok {
 				if err := ps.peerConnection.RemoveTrack(sender); err != nil {
 					log.Println(err.Error())
-					return
+					return true
 				}
 			}
 		}
-		log.Println("signalPeerConnections3")
-
 		for _, receiver := range ps.peerConnection.GetReceivers() {
 			if receiver.Track() == nil {
 				continue
 			}
-
 			existingSenders[receiver.Track().ID()] = true
 		}
-		log.Println("signalPeerConnections4")
-
 		for trackID := range h.trackLocals {
 			if _, ok := existingSenders[trackID]; !ok {
 				if _, err := ps.peerConnection.AddTrack(h.trackLocals[trackID]); err != nil {
 					log.Println(err.Error())
-					return
+					return true
 				}
 			}
 		}
-		log.Println("signalPeerConnections555")
 
 		offer, err := ps.peerConnection.CreateOffer(nil)
 		if err != nil {
 			log.Println(err.Error())
-			return
-		}
-
-		if err = ps.peerConnection.SetLocalDescription(offer); err != nil {
-			log.Println(err.Error())
-			return
+			return true
 		}
 		messageJSON, err := NewOfferMessageJSON(ps.client.userName, offer)
 		if err != nil {
 			log.Println(err.Error())
-			return
+			return true
 		}
 
-		log.Println("signalPeerConnections3")
-		ps.client.sendMessage <- messageJSON
-		log.Println("signalPeerConnections4")
+		if err = ps.peerConnection.SetLocalDescription(offer); err != nil {
+			log.Println(err.Error())
+			return true
+		}
+		flusher, _ := ps.client.w.(http.Flusher)
+
+		fmt.Fprintf(ps.client.w, "data: %s\n\n", messageJSON)
+		flusher.Flush()
 	}
+	return false
 }

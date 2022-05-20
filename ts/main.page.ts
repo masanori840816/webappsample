@@ -44,16 +44,12 @@ function handleReceivedMessage(value: string) {
             view.addReceivedText({ user: message.userName, message: message.data });
             break;
         case "offer":
-            console.log("Offer");
             webrtc.handleOffer(JSON.parse(message.data));
             break;
         case "candidate":
-            console.log("Candidate");
             webrtc.handleCandidate(JSON.parse(message.data));
             break;
     }
-    console.log(value);
-    
 }
 function sendAnswer(data: RTCSessionDescriptionInit) {
     if(!hasAnyTexts(userName)) {

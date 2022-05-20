@@ -11,26 +11,25 @@ import (
 )
 
 type SSEClient struct {
-	sendMessage           chan string
 	candidateChan         chan *webrtc.ICECandidate
 	changeConnectionState chan webrtc.PeerConnectionState
 	addTrack              chan *webrtc.TrackRemote
 	userName              string
+	w                     http.ResponseWriter
 }
 
 func (c *SSEClient) CloseAllChannels() {
-	close(c.sendMessage)
 	close(c.candidateChan)
 	close(c.changeConnectionState)
 	close(c.addTrack)
 }
-func newSSEClient(userName string) *SSEClient {
+func newSSEClient(userName string, w http.ResponseWriter) *SSEClient {
 	return &SSEClient{
-		sendMessage:           make(chan string),
 		candidateChan:         make(chan *webrtc.ICECandidate),
 		changeConnectionState: make(chan webrtc.PeerConnectionState),
 		addTrack:              make(chan *webrtc.TrackRemote),
 		userName:              userName,
+		w:                     w,
 	}
 }
 
@@ -41,7 +40,7 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		fmt.Fprint(w, "The parameters have no names")
 		return
 	}
-	newClient := newSSEClient(userName)
+	newClient := newSSEClient(userName, w)
 	ps, err := NewPeerConnectionState(newClient)
 	if err != nil {
 		log.Println(err.Error())
@@ -51,41 +50,33 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	// For pushing data to clients, I call "flusher.Flush()"
-	flusher, _ := w.(http.Flusher)
 
 	hub.register <- ps
 
+	// For pushing data to clients, I call "flusher.Flush()"
+	flusher, _ := w.(http.Flusher)
 	defer func() {
 		hub.unregister <- ps
+		ps.client.CloseAllChannels()
 	}()
 	for {
 		select {
-		case message := <-newClient.sendMessage:
-			// push received messages to clients
-			// This format must be like "data: {value}\n\n" or clients can't be gotten the value.
-			fmt.Fprintf(w, "data: %s\n\n", message)
-
-			// Flush the data immediatly instead of buffering it for later.
-			flusher.Flush()
-		case candidate := <-newClient.candidateChan:
-			jsonValue, err := NewCandidateMessageJSON(newClient.userName, candidate)
+		case candidate := <-ps.client.candidateChan:
+			jsonValue, err := NewCandidateMessageJSON(ps.client.userName, candidate)
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
 			fmt.Fprintf(w, "data: %s\n\n", jsonValue)
 			flusher.Flush()
-		case track := <-newClient.addTrack:
+		case track := <-ps.client.addTrack:
 			hub.addTrack <- track
-		case connectionState := <-newClient.changeConnectionState:
+		case connectionState := <-ps.client.changeConnectionState:
 			switch connectionState {
 			case webrtc.PeerConnectionStateFailed:
-				if err := ps.peerConnection.Close(); err != nil {
-					log.Print(err)
-				}
+				break
 			case webrtc.PeerConnectionStateClosed:
-				signalPeerConnections(hub)
+				break
 			}
 		case <-r.Context().Done():
 			// when "es.close()" is called, this loop operation will be ended.
@@ -94,37 +85,27 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	}
 }
 func sendSSEMessage(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
-	returnValue := &ActionResult{}
 	w.Header().Set("Content-Type", "application/json")
 	body, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
 		log.Println(err.Error())
-		returnValue.Succeeded = false
-		returnValue.ErrorMessage = "Failed reading values from body"
-		failedReadingData, _ := json.Marshal(returnValue)
-		w.Write(failedReadingData)
+		j, _ := json.Marshal(GetFailed("Failed reading values from body"))
+
+		w.Write(j)
 		return
 	}
 	message := &ClientMessage{}
 	err = json.Unmarshal(body, &message)
 	if err != nil {
 		log.Println(err.Error())
-		returnValue.Succeeded = false
-		returnValue.ErrorMessage = "Failed converting to WebSocketMessage"
-		failedConvertingData, _ := json.Marshal(returnValue)
-		w.Write(failedConvertingData)
+		j, _ := json.Marshal(GetFailed("Failed converting to ClientMessage"))
+
+		w.Write(j)
 		return
 	}
 	w.WriteHeader(200)
-
-	log.Println("sendMessage 4")
 	hub.broadcast <- *message
-
-	log.Println("sendMessage 5")
-	returnValue.Succeeded = true
-	data, _ := json.Marshal(returnValue)
+	data, _ := json.Marshal(GetSucceeded())
 	w.Write(data)
-
-	log.Println("sendMessage 6")
 }
