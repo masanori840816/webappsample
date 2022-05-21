@@ -2,8 +2,6 @@ module sample/webappsample
 
 go 1.18
 
-require github.com/gorilla/websocket v1.5.0
-
 require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/pion/datachannel v1.5.2 // indirect
@@ -13,7 +11,7 @@ require (
 	github.com/pion/logging v0.2.2 // indirect
 	github.com/pion/mdns v0.0.5 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
-	github.com/pion/rtcp v1.2.9 // indirect
+	github.com/pion/rtcp v1.2.9
 	github.com/pion/rtp v1.7.13 // indirect
 	github.com/pion/sctp v1.8.2 // indirect
 	github.com/pion/sdp/v3 v3.0.5 // indirect
@@ -22,7 +20,7 @@ require (
 	github.com/pion/transport v0.13.0 // indirect
 	github.com/pion/turn/v2 v2.0.8 // indirect
 	github.com/pion/udp v0.1.1 // indirect
-	github.com/pion/webrtc/v3 v3.1.40 // indirect
+	github.com/pion/webrtc/v3 v3.1.40
 	golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8 // indirect
 	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4 // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect

@@ -60,6 +60,7 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		close(newClient.addTrack)
 	}()
 	for {
+		// handle PeerConnection events and close SSE event.
 		select {
 		case candidate := <-ps.client.candidateFound:
 			jsonValue, err := NewCandidateMessageJSON(ps.client.userName, candidate)
