@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v3"
 )
 
@@ -29,10 +30,12 @@ func newSSEHub() *SSEHub {
 		addTrack:    make(chan *webrtc.TrackRemote),
 	}
 }
-func newTrackLocalStaticRTP(track *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
-	return webrtc.NewTrackLocalStaticRTP(track.Codec().RTPCodecCapability, track.ID(), track.StreamID())
-}
 func (h *SSEHub) run() {
+	go func() {
+		for range time.NewTicker(time.Second * 3).C {
+			dispatchKeyFrame(h)
+		}
+	}()
 	for {
 		select {
 		case client := <-h.register:
@@ -40,32 +43,31 @@ func (h *SSEHub) run() {
 			signalPeerConnections(h)
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
-				if client.peerConnection.ConnectionState() == webrtc.PeerConnectionStateConnected {
-					client.peerConnection.Close()
-				}
 				delete(h.clients, client)
 				signalPeerConnections(h)
 			}
 		case track := <-h.addTrack:
-			trackLocal, err := newTrackLocalStaticRTP(track)
+			trackLocal, err := webrtc.NewTrackLocalStaticRTP(track.Codec().RTPCodecCapability,
+				track.ID(), track.StreamID())
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
 			h.trackLocals[track.ID()] = trackLocal
 			signalPeerConnections(h)
-			defer func() {
-				delete(h.trackLocals, track.ID())
-				signalPeerConnections(h)
-			}()
-			go updateTrackValue(track, trackLocal)
+			go updateTrackValue(h, track)
 
 		case message := <-h.broadcast:
 			handleReceivedMessage(h, message)
 		}
 	}
 }
-func updateTrackValue(track *webrtc.TrackRemote, trackLocal *webrtc.TrackLocalStaticRTP) {
+func updateTrackValue(h *SSEHub, track *webrtc.TrackRemote) {
+	defer func() {
+		delete(h.trackLocals, track.ID())
+		signalPeerConnections(h)
+	}()
+
 	buf := make([]byte, 1500)
 
 	for {
@@ -73,8 +75,7 @@ func updateTrackValue(track *webrtc.TrackRemote, trackLocal *webrtc.TrackLocalSt
 		if err != nil {
 			return
 		}
-
-		if _, err = trackLocal.Write(buf[:i]); err != nil {
+		if _, err = h.trackLocals[track.ID()].Write(buf[:i]); err != nil {
 			return
 		}
 	}
@@ -123,6 +124,9 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 	}
 }
 func signalPeerConnections(h *SSEHub) {
+	defer func() {
+		dispatchKeyFrame(h)
+	}()
 	for syncAttempt := 0; ; syncAttempt++ {
 		if syncAttempt == 25 {
 			// Release the lock and attempt a sync in 3 seconds. We might be blocking a RemoveTrack or AddTrack
@@ -196,4 +200,19 @@ func attemptSync(h *SSEHub) bool {
 		flusher.Flush()
 	}
 	return false
+}
+func dispatchKeyFrame(h *SSEHub) {
+	for ps := range h.clients {
+		for _, receiver := range ps.peerConnection.GetReceivers() {
+			if receiver.Track() == nil {
+				continue
+			}
+
+			_ = ps.peerConnection.WriteRTCP([]rtcp.Packet{
+				&rtcp.PictureLossIndication{
+					MediaSSRC: uint32(receiver.Track().SSRC()),
+				},
+			})
+		}
+	}
 }

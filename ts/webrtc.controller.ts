@@ -60,6 +60,10 @@ export class WebRtcController {
         this.peerConnection.onconnectionstatechange = (ev) => console.log(ev);
         
         this.peerConnection.ontrack = (ev) => {
+
+            console.log("Track kind: " + ev.track.kind + " streamLen: " + ev.streams.length);
+            
+
             if (ev.track.kind === "audio" ||
                 ev.streams[0] == null) {
               return;
@@ -81,9 +85,17 @@ export class WebRtcController {
               }
             };
           };
-        for(const track of this.webcamStream.getTracks()) {
+        /*for(const track of this.webcamStream.getTracks()) {
             this.peerConnection.addTrack(track);
-        }
+        }*/
+        this.webcamStream.getTracks().forEach(track => {
+            if(this.peerConnection == null ||
+                this.webcamStream == null) {
+                    console.error(`Conn?: ${this.peerConnection == null} Stream?: ${this.webcamStream == null}`);
+                return;
+            }
+            this.peerConnection.addTrack(track, this.webcamStream)
+        });
         this.peerConnection.onicecandidate = ev => {
             if (ev.candidate == null ||
                 this.candidateSentEvent == null) {

@@ -10,7 +10,7 @@ type PeerConnectionState struct {
 }
 
 func NewPeerConnectionState(client *SSEClient) (*PeerConnectionState, error) {
-	/*peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{
+	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
 				URLs: []string{
@@ -18,8 +18,7 @@ func NewPeerConnectionState(client *SSEClient) (*PeerConnectionState, error) {
 				},
 			},
 		},
-	})*/
-	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -34,22 +33,13 @@ func NewPeerConnectionState(client *SSEClient) (*PeerConnectionState, error) {
 		if i == nil {
 			return
 		}
-		//_, ok := <-client.candidateChan
-		//if ok {
-		client.candidateChan <- i
-		//}
+		client.candidateFound <- i
 	})
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
-		//_, ok := <-client.changeConnectionState
-		//if ok {
 		client.changeConnectionState <- p
-		//}
 	})
 	peerConnection.OnTrack(func(t *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
-		//_, ok := <-client.addTrack
-		//if ok {
 		client.addTrack <- t
-		//}
 	})
 
 	return &PeerConnectionState{
