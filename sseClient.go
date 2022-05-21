@@ -62,17 +62,17 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	for {
 		// handle PeerConnection events and close SSE event.
 		select {
-		case candidate := <-ps.client.candidateFound:
-			jsonValue, err := NewCandidateMessageJSON(ps.client.userName, candidate)
+		case candidate := <-newClient.candidateFound:
+			jsonValue, err := NewCandidateMessageJSON(newClient.userName, candidate)
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
 			fmt.Fprintf(w, "data: %s\n\n", jsonValue)
 			flusher.Flush()
-		case track := <-ps.client.addTrack:
+		case track := <-newClient.addTrack:
 			hub.addTrack <- track
-		case connectionState := <-ps.client.changeConnectionState:
+		case connectionState := <-newClient.changeConnectionState:
 			switch connectionState {
 			case webrtc.PeerConnectionStateFailed:
 				return
