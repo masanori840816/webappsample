@@ -36,6 +36,14 @@ func NewPeerConnectionState(client *SSEClient) (*PeerConnectionState, error) {
 		client.candidateFound <- i
 	})
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
+		// avoid panic after closing channel
+		if p == webrtc.PeerConnectionStateClosed {
+			_, ok := <-client.changeConnectionState
+			if ok {
+				client.changeConnectionState <- p
+			}
+			return
+		}
 		client.changeConnectionState <- p
 	})
 	peerConnection.OnTrack(func(t *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
