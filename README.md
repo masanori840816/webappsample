@@ -13,3 +13,6 @@ For signaling and sending text messages, I use Sever-Sent Events.
 
 ## My blog posts
 * [[Go] Try Server-Sent Events](https://dev.to/masanori_msl/go-try-server-sent-events-19fh)
+
+## License
+MIT
