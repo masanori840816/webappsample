@@ -55,15 +55,15 @@ export class WebRtcController {
             console.error("Local video was null");
             return;
         }
-        this.peerConnection = new RTCPeerConnection();
+        this.peerConnection = new RTCPeerConnection({
+            iceServers: [{
+                urls: `stun:stun.l.google.com:19302`,  // A STUN server              
+            }]
+        });
 
         this.peerConnection.onconnectionstatechange = (ev) => console.log(ev);
         
         this.peerConnection.ontrack = (ev) => {
-
-            console.log("Track kind: " + ev.track.kind + " streamLen: " + ev.streams.length);
-            
-
             if (ev.track.kind === "audio" ||
                 ev.streams[0] == null) {
               return;
@@ -85,13 +85,9 @@ export class WebRtcController {
               }
             };
           };
-        /*for(const track of this.webcamStream.getTracks()) {
-            this.peerConnection.addTrack(track);
-        }*/
         this.webcamStream.getTracks().forEach(track => {
             if(this.peerConnection == null ||
                 this.webcamStream == null) {
-                    console.error(`Conn?: ${this.peerConnection == null} Stream?: ${this.webcamStream == null}`);
                 return;
             }
             this.peerConnection.addTrack(track, this.webcamStream)
