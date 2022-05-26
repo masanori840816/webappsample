@@ -24,8 +24,8 @@ export function close() {
     userName = "";
     sse.close();
 }
-function init() {
-    sse = new SseController();
+export function init(url: string) {
+    sse = new SseController(url);
     sse.addEvents((value) => handleReceivedMessage(value));
     webrtc = new WebRtcController();
     webrtc.addEvents((message) => sendAnswer(message),
@@ -84,4 +84,3 @@ function checkIsClientMessage(value: any): value is ClientMessage {
     }
     return true;
 }
-init();

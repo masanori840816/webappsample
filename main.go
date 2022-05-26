@@ -37,6 +37,6 @@ func main() {
 		registerSSEClient(w, r, &hub)
 	})
 
-	http.Handle("/", &templateHandler{filename: "index.html", serverUrl: "http://localhost:8080/sse"})
+	http.Handle("/", &templateHandler{filename: "index.html", serverUrl: "http://localhost:8080"})
 	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 }

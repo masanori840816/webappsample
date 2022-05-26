@@ -4,9 +4,14 @@ import { ClientMessage } from "./webrtc.type";
 export class SseController {
     private es: EventSource|null = null;
     private messageReceivedEvent: ((value: string) => void)|null = null;
+    private baseUrl = "";
 
+    public constructor(baseUrl: string) {
+        this.baseUrl = baseUrl;
+    }
     public connect(userName: string) {
-        this.es = new EventSource(`http://localhost:8080/sse?user=${userName}`);
+
+        this.es = new EventSource(`${this.baseUrl}/sse?user=${userName}`);
         
         this.es.onmessage = (ev) => {
             if(!hasAnyTexts(ev.data) ||
@@ -23,7 +28,7 @@ export class SseController {
         this.messageReceivedEvent = messageReceivedEvent;
     }
     public sendMessage(message: ClientMessage) {
-        fetch("http://localhost:8080/sse/message", 
+        fetch(`${this.baseUrl}/sse/message`, 
             {
                 method: "POST",
                 body: JSON.stringify(message),
