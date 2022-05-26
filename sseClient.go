@@ -11,20 +11,14 @@ import (
 )
 
 type SSEClient struct {
-	candidateFound        chan *webrtc.ICECandidate
-	changeConnectionState chan webrtc.PeerConnectionState
-	addTrack              chan *webrtc.TrackRemote
-	userName              string
-	w                     http.ResponseWriter
+	userName string
+	w        http.ResponseWriter
 }
 
 func newSSEClient(userName string, w http.ResponseWriter) *SSEClient {
 	return &SSEClient{
-		candidateFound:        make(chan *webrtc.ICECandidate),
-		changeConnectionState: make(chan webrtc.PeerConnectionState),
-		addTrack:              make(chan *webrtc.TrackRemote),
-		userName:              userName,
-		w:                     w,
+		userName: userName,
+		w:        w,
 	}
 }
 
@@ -36,7 +30,13 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		return
 	}
 	newClient := newSSEClient(userName, w)
-	ps, err := NewPeerConnectionState(newClient)
+	peerConnection, err := NewPeerConnection()
+	if err != nil {
+		log.Println(err.Error())
+		fmt.Fprint(w, "Failed creating PeerConnection")
+		return
+	}
+	ps, err := NewPeerConnectionState(newClient, peerConnection)
 	if err != nil {
 		log.Println(err.Error())
 		fmt.Fprint(w, "Failed connection")
@@ -52,17 +52,13 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	flusher, _ := w.(http.Flusher)
 	defer func() {
 		hub.unregister <- ps
-		if ps.peerConnection.ConnectionState() != webrtc.PeerConnectionStateClosed {
-			ps.peerConnection.Close()
-		}
-		close(newClient.candidateFound)
-		close(newClient.changeConnectionState)
-		close(newClient.addTrack)
+		ps.Close()
 	}()
+
 	for {
 		// handle PeerConnection events and close SSE event.
 		select {
-		case candidate := <-newClient.candidateFound:
+		case candidate := <-ps.candidateFound:
 			jsonValue, err := NewCandidateMessageJSON(newClient.userName, candidate)
 			if err != nil {
 				log.Println(err.Error())
@@ -70,9 +66,9 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 			}
 			fmt.Fprintf(w, "data: %s\n\n", jsonValue)
 			flusher.Flush()
-		case track := <-newClient.addTrack:
+		case track := <-ps.addTrack:
 			hub.addTrack <- track
-		case connectionState := <-newClient.changeConnectionState:
+		case connectionState := <-ps.changeConnectionState:
 			switch connectionState {
 			case webrtc.PeerConnectionStateFailed:
 				return
