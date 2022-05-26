@@ -1,3 +1,5 @@
+import * as dataChannel from "./dataChannels"
+
 export class WebRtcController {
     private webcamStream: MediaStream|null = null; 
     private peerConnection: RTCPeerConnection|null = null;
@@ -99,6 +101,7 @@ export class WebRtcController {
             }
             this.candidateSentEvent(ev.candidate);
         };
+        dataChannel.createTextDataChannel("sample", 20, this.peerConnection);
     }
     
 }

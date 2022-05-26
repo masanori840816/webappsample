@@ -42,6 +42,12 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		fmt.Fprint(w, "Failed connection")
 		return
 	}
+	dc1, err := NewWebRTCDataChannelState("sample", 20, peerConnection)
+	if err != nil {
+		log.Println(err.Error())
+		fmt.Fprint(w, "Failed adding DataChannel")
+		return
+	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -52,6 +58,7 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	flusher, _ := w.(http.Flusher)
 	defer func() {
 		hub.unregister <- ps
+		dc1.Close()
 		ps.Close()
 	}()
 
