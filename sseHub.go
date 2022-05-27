@@ -30,7 +30,14 @@ func newSSEHub() *SSEHub {
 		addTrack:    make(chan *webrtc.TrackRemote),
 	}
 }
+func (h *SSEHub) close() {
+	close(h.broadcast)
+	close(h.register)
+	close(h.unregister)
+	close(h.addTrack)
+}
 func (h *SSEHub) run() {
+	defer h.close()
 	go func() {
 		for range time.NewTicker(time.Second * 3).C {
 			dispatchKeyFrame(h)
