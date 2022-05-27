@@ -19,7 +19,13 @@
             <div>Remote Videos</div>
             <div id="remote_video_area"></div>
         </div>
-        
+        <div>
+            <div>DataChannel</div>
+            <div>        
+                <button onclick="Page.sendTextDataChannel()">Send Text</button>
+            </div>
+            <div id="received_datachannel_area"></div>
+        </div>
         <script src="/js/main.page.js"></script>
         <script>Page.init('{{.}}');</script>
     </body>

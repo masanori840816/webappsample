@@ -3,6 +3,7 @@ import * as dataChannel from "./dataChannels"
 export class WebRtcController {
     private webcamStream: MediaStream|null = null; 
     private peerConnection: RTCPeerConnection|null = null;
+    private dataChannels: dataChannel.DataChannel[] = [];
     private answerSentEvent: ((data: RTCSessionDescriptionInit) => void)|null = null;
     private candidateSentEvent: ((data: RTCIceCandidate) => void)|null = null;
     public init() {
@@ -52,6 +53,17 @@ export class WebRtcController {
         }
         this.peerConnection.addIceCandidate(data);
     }
+    public sendTextDataChannel(value: string) {
+        if(this.peerConnection == null ||
+            this.peerConnection.connectionState !== "connected") {
+            return;
+        }
+        const target = this.dataChannels.find(c => c.dataChannel.id == 20);
+        if(target == null) {
+            return;
+        }
+        target.dataChannel.send(value);
+    }
     private connect() {
         if(this.webcamStream == null) {
             console.error("Local video was null");
@@ -100,8 +112,12 @@ export class WebRtcController {
               return;
             }
             this.candidateSentEvent(ev.candidate);
-        };
-        dataChannel.createTextDataChannel("sample", 20, this.peerConnection);
+        };        
+        this.dataChannels.push(
+            dataChannel.createTextDataChannel("sample3", 20, this.peerConnection,
+            (message) => console.log(message)));
+        this.dataChannels.push(
+            dataChannel.createTextDataChannel("sample2", 21, this.peerConnection,
+            (message) => console.log(message)));
     }
-    
 }

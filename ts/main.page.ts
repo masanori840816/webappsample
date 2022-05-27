@@ -33,6 +33,10 @@ export function init(url: string) {
     webrtc.init();
     view = new MainView();
 }
+export function sendTextDataChannel() {
+    const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
+    webrtc.sendTextDataChannel(messageInput.value);
+}
 function handleReceivedMessage(value: string) {
     const message = JSON.parse(value);
     if(!checkIsClientMessage(message)) {
