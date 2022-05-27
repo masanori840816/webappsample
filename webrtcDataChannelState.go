@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"github.com/pion/webrtc/v3"
 )
 
@@ -72,7 +70,7 @@ func addWebRTCDataChannel(label string, id uint16, peerConnection *webrtc.PeerCo
 }
 func newWebRTCDataChannel(label string, id uint16, peerConnection *webrtc.PeerConnection) (*webrtc.DataChannel, error) {
 	negotiated := true
-	ordered := true
+	ordered := false
 	dc, err := peerConnection.CreateDataChannel(label, &webrtc.DataChannelInit{
 		ID:         &id,
 		Negotiated: &negotiated,
@@ -81,13 +79,5 @@ func newWebRTCDataChannel(label string, id uint16, peerConnection *webrtc.PeerCo
 	if err != nil {
 		return nil, err
 	}
-
-	dc.OnOpen(func() {
-		log.Println("OnOpen")
-	})
-
-	dc.OnClose(func() {
-		log.Println("OnClose")
-	})
 	return dc, nil
 }

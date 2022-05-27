@@ -29,7 +29,8 @@ export function init(url: string) {
     sse.addEvents((value) => handleReceivedMessage(value));
     webrtc = new WebRtcController();
     webrtc.addEvents((message) => sendAnswer(message),
-        (message) => sendCandidate(message));
+        (message) => sendCandidate(message),
+        (message) => view.addReceivedDataChannelValue(message));
     webrtc.init();
     view = new MainView();
 }

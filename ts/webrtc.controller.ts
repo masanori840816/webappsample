@@ -6,6 +6,7 @@ export class WebRtcController {
     private dataChannels: dataChannel.DataChannel[] = [];
     private answerSentEvent: ((data: RTCSessionDescriptionInit) => void)|null = null;
     private candidateSentEvent: ((data: RTCIceCandidate) => void)|null = null;
+    private dataChannelMessageEvent: ((data: string|Uint8Array) => void)|null = null;
     public init() {
         const localVideo = document.getElementById("local_video") as HTMLVideoElement;
         localVideo.addEventListener("canplay", () => {
@@ -24,9 +25,11 @@ export class WebRtcController {
           .catch(err => console.error(`An error occurred: ${err}`));
     }
     public addEvents(answerSentEvent: (data: RTCSessionDescriptionInit) => void,
-        candidateSentEvent: (data: RTCIceCandidate) => void) {
+        candidateSentEvent: (data: RTCIceCandidate) => void,
+        dataChannelMessageEvent: (data: string|Uint8Array) => void) {
         this.answerSentEvent = answerSentEvent;
         this.candidateSentEvent = candidateSentEvent;
+        this.dataChannelMessageEvent = dataChannelMessageEvent;
     }
     public handleOffer(data: RTCSessionDescription|null|undefined) {
         if(this.peerConnection == null ||
@@ -115,9 +118,17 @@ export class WebRtcController {
         };        
         this.dataChannels.push(
             dataChannel.createTextDataChannel("sample3", 20, this.peerConnection,
-            (message) => console.log(message)));
+            (message) => {
+                if(this.dataChannelMessageEvent != null) {
+                    this.dataChannelMessageEvent(message);
+                }
+            }));
         this.dataChannels.push(
             dataChannel.createTextDataChannel("sample2", 21, this.peerConnection,
-            (message) => console.log(message)));
+            (message) => {
+                if(this.dataChannelMessageEvent != null) {
+                    this.dataChannelMessageEvent(message);
+                }
+            }));
     }
 }

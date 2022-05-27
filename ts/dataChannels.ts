@@ -9,7 +9,7 @@ export function createTextDataChannel(label: string, id: number,
     const dc = peerConnection.createDataChannel(label, {
         id,
         negotiated: true,
-        ordered: true
+        ordered: false
     });
     const decoder = new TextDecoder("utf-8");
     dc.onmessage = (ev) => {        
