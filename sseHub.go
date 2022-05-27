@@ -12,22 +12,24 @@ import (
 )
 
 type SSEHub struct {
-	clients     map[*PeerConnectionState]bool
-	broadcast   chan ClientMessage
-	register    chan *PeerConnectionState
-	unregister  chan *PeerConnectionState
-	trackLocals map[string]*webrtc.TrackLocalStaticRTP
-	addTrack    chan *webrtc.TrackRemote
+	clients                     map[*PeerConnectionState]bool
+	broadcast                   chan ClientMessage
+	register                    chan *PeerConnectionState
+	unregister                  chan *PeerConnectionState
+	trackLocals                 map[string]*webrtc.TrackLocalStaticRTP
+	addTrack                    chan *webrtc.TrackRemote
+	broadcastDataChannelMessage chan ReceivedDataChannelMessage
 }
 
 func newSSEHub() *SSEHub {
 	return &SSEHub{
-		clients:     make(map[*PeerConnectionState]bool),
-		broadcast:   make(chan ClientMessage),
-		register:    make(chan *PeerConnectionState),
-		unregister:  make(chan *PeerConnectionState),
-		trackLocals: map[string]*webrtc.TrackLocalStaticRTP{},
-		addTrack:    make(chan *webrtc.TrackRemote),
+		clients:                     make(map[*PeerConnectionState]bool),
+		broadcast:                   make(chan ClientMessage),
+		register:                    make(chan *PeerConnectionState),
+		unregister:                  make(chan *PeerConnectionState),
+		trackLocals:                 map[string]*webrtc.TrackLocalStaticRTP{},
+		addTrack:                    make(chan *webrtc.TrackRemote),
+		broadcastDataChannelMessage: make(chan ReceivedDataChannelMessage),
 	}
 }
 func (h *SSEHub) close() {
@@ -35,6 +37,7 @@ func (h *SSEHub) close() {
 	close(h.register)
 	close(h.unregister)
 	close(h.addTrack)
+	close(h.broadcastDataChannelMessage)
 }
 func (h *SSEHub) run() {
 	defer h.close()
@@ -66,6 +69,8 @@ func (h *SSEHub) run() {
 
 		case message := <-h.broadcast:
 			handleReceivedMessage(h, message)
+		case message := <-h.broadcastDataChannelMessage:
+			sendDataChannelMessage(h, message)
 		}
 	}
 }
@@ -222,4 +227,12 @@ func dispatchKeyFrame(h *SSEHub) {
 			})
 		}
 	}
+}
+func sendDataChannelMessage(h *SSEHub, message ReceivedDataChannelMessage) {
+	for ps := range h.clients {
+		if ps.client.userName != message.UserName {
+			ps.channels.SendMessage(message)
+		}
+	}
+
 }

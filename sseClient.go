@@ -36,16 +36,16 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		fmt.Fprint(w, "Failed creating PeerConnection")
 		return
 	}
-	ps, err := NewPeerConnectionState(newClient, peerConnection)
-	if err != nil {
-		log.Println(err.Error())
-		fmt.Fprint(w, "Failed connection")
-		return
-	}
 	dc, err := NewWebRTCDataChannelStates(peerConnection)
 	if err != nil {
 		log.Println(err.Error())
 		fmt.Fprint(w, "Failed adding DataChannel")
+		return
+	}
+	ps, err := NewPeerConnectionState(newClient, peerConnection, dc)
+	if err != nil {
+		log.Println(err.Error())
+		fmt.Fprint(w, "Failed connection")
 		return
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -83,9 +83,15 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 				return
 			}
 		case message := <-dc.MessageCh:
-			log.Println("GetMessage")
-			log.Println(message.ID)
-			log.Println(string(message.Message.Data))
+			if message.Error != nil {
+				log.Println(message.Error.Error())
+				return
+			}
+			hub.broadcastDataChannelMessage <- ReceivedDataChannelMessage{
+				ID:       message.ID,
+				UserName: userName,
+				Message:  message.Message,
+			}
 		case <-r.Context().Done():
 			// when "es.close()" is called, this loop operation will be ended.
 			return

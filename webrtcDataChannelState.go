@@ -15,7 +15,19 @@ type WebRTCDataChannelMessage struct {
 	Message webrtc.DataChannelMessage
 	Error   error
 }
+type ReceivedDataChannelMessage struct {
+	UserName string
+	ID       uint16
+	Message  webrtc.DataChannelMessage
+}
 
+func (dc *WebRTCDataChannelStates) SendMessage(message ReceivedDataChannelMessage) {
+	for i, channel := range dc.DataChannels {
+		if i == message.ID {
+			channel.Send(message.Message.Data)
+		}
+	}
+}
 func (dc *WebRTCDataChannelStates) Close() {
 	for _, v := range dc.DataChannels {
 		v.Close()
@@ -37,7 +49,8 @@ func NewWebRTCDataChannelStates(peerConnection *webrtc.PeerConnection) (*WebRTCD
 	}
 	return dc, nil
 }
-func addWebRTCDataChannel(label string, id uint16, peerConnection *webrtc.PeerConnection, dc *WebRTCDataChannelStates) error {
+func addWebRTCDataChannel(label string, id uint16, peerConnection *webrtc.PeerConnection,
+	dc *WebRTCDataChannelStates) error {
 	dataChannel, err := newWebRTCDataChannel(label, id, peerConnection)
 	if err != nil {
 		return err

@@ -7,6 +7,7 @@ import (
 type PeerConnectionState struct {
 	peerConnection        *webrtc.PeerConnection
 	client                *SSEClient
+	channels              *WebRTCDataChannelStates
 	candidateFound        chan *webrtc.ICECandidate
 	changeConnectionState chan webrtc.PeerConnectionState
 	addTrack              chan *webrtc.TrackRemote
@@ -47,7 +48,8 @@ func NewPeerConnection() (*webrtc.PeerConnection, error) {
 	}
 	return peerConnection, nil
 }
-func NewPeerConnectionState(client *SSEClient, peerConnection *webrtc.PeerConnection) (*PeerConnectionState, error) {
+func NewPeerConnectionState(client *SSEClient, peerConnection *webrtc.PeerConnection,
+	channels *WebRTCDataChannelStates) (*PeerConnectionState, error) {
 	heartbeat := make(chan int, 1)
 	candidateFound := make(chan *webrtc.ICECandidate)
 	changeConnectionState := make(chan webrtc.PeerConnectionState)
@@ -83,6 +85,7 @@ func NewPeerConnectionState(client *SSEClient, peerConnection *webrtc.PeerConnec
 	return &PeerConnectionState{
 		peerConnection:        peerConnection,
 		client:                client,
+		channels:              channels,
 		candidateFound:        candidateFound,
 		changeConnectionState: changeConnectionState,
 		addTrack:              addTrack,
