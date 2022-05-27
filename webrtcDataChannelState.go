@@ -13,6 +13,7 @@ type WebRTCDataChannelStates struct {
 type WebRTCDataChannelMessage struct {
 	ID      uint16
 	Message webrtc.DataChannelMessage
+	Error   error
 }
 
 func (dc *WebRTCDataChannelStates) Close() {
@@ -48,6 +49,12 @@ func addWebRTCDataChannel(label string, id uint16, peerConnection *webrtc.PeerCo
 			Message: msg,
 		}
 	})
+	dataChannel.OnError(func(err error) {
+		dc.MessageCh <- WebRTCDataChannelMessage{
+			ID:    id,
+			Error: err,
+		}
+	})
 	return nil
 }
 func newWebRTCDataChannel(label string, id uint16, peerConnection *webrtc.PeerConnection) (*webrtc.DataChannel, error) {
@@ -66,9 +73,6 @@ func newWebRTCDataChannel(label string, id uint16, peerConnection *webrtc.PeerCo
 		log.Println("OnOpen")
 	})
 
-	dc.OnError(func(err error) {
-		log.Println(err.Error())
-	})
 	dc.OnClose(func() {
 		log.Println("OnClose")
 	})

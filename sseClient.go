@@ -85,7 +85,7 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		case message := <-dc.MessageCh:
 			log.Println("GetMessage")
 			log.Println(message.ID)
-			log.Println(message.Message.Data)
+			log.Println(string(message.Message.Data))
 		case <-r.Context().Done():
 			// when "es.close()" is called, this loop operation will be ended.
 			return
