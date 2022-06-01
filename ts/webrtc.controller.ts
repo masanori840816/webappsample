@@ -20,7 +20,6 @@ export class WebRtcController {
               localVideo.srcObject = stream;
               localVideo.play();
               this.webcamStream = stream;
-              this.connect();
           })
           .catch(err => console.error(`An error occurred: ${err}`));
     }
@@ -67,7 +66,7 @@ export class WebRtcController {
         }
         target.dataChannel.send(value);
     }
-    private connect() {
+    public connect() {
         if(this.webcamStream == null) {
             console.error("Local video was null");
             return;

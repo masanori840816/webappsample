@@ -11,6 +11,7 @@ let userName = ""
 export function connect(): void {
     const userNameInput = document.getElementById("user_name") as HTMLInputElement;
     userName = userNameInput.value;
+    webrtc.connect();
     sse.connect(userName);
 }
 export function send() {
