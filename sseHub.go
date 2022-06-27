@@ -171,7 +171,6 @@ func attemptSync(h *SSEHub) bool {
 
 			if _, ok := h.trackLocals[sender.Track().ID()]; !ok {
 				if err := ps.peerConnection.RemoveTrack(sender); err != nil {
-					log.Println(err.Error())
 					return true
 				}
 			}
@@ -185,7 +184,6 @@ func attemptSync(h *SSEHub) bool {
 		for trackID := range h.trackLocals {
 			if _, ok := existingSenders[trackID]; !ok {
 				if _, err := ps.peerConnection.AddTrack(h.trackLocals[trackID]); err != nil {
-					log.Println(err.Error())
 					return true
 				}
 			}
@@ -193,17 +191,14 @@ func attemptSync(h *SSEHub) bool {
 
 		offer, err := ps.peerConnection.CreateOffer(nil)
 		if err != nil {
-			log.Println(err.Error())
 			return true
 		}
 		messageJSON, err := NewOfferMessageJSON(ps.client.userName, offer)
 		if err != nil {
-			log.Println(err.Error())
 			return true
 		}
 
 		if err = ps.peerConnection.SetLocalDescription(offer); err != nil {
-			log.Println(err.Error())
 			return true
 		}
 		flusher, _ := ps.client.w.(http.Flusher)
