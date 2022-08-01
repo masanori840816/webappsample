@@ -33,6 +33,7 @@ func newSSEHub() *SSEHub {
 	}
 }
 func (h *SSEHub) close() {
+	log.Println("Hub closed")
 	close(h.broadcast)
 	close(h.register)
 	close(h.unregister)
@@ -75,6 +76,7 @@ func (h *SSEHub) run() {
 	}
 }
 func updateTrackValue(h *SSEHub, track *webrtc.TrackRemote) {
+	log.Printf("updateTrackValue Track: %s Kind: %s MSID: %s", track.ID(), track.Kind(), track.Msid())
 	defer func() {
 		delete(h.trackLocals, track.ID())
 		signalPeerConnections(h)
@@ -105,6 +107,7 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 			flusher.Flush()
 		}
 	case CandidateEvent:
+		log.Printf("R Candidate: %s", message.Data)
 		candidate := webrtc.ICECandidateInit{}
 		if err := json.Unmarshal([]byte(message.Data), &candidate); err != nil {
 			log.Println(err)
@@ -120,6 +123,7 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 		}
 	case AnswerEvent:
 		answer := webrtc.SessionDescription{}
+		log.Printf("R Answer: %s", message.Data)
 		if err := json.Unmarshal([]byte(message.Data), &answer); err != nil {
 			log.Println(err)
 			return
@@ -132,7 +136,9 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 				}
 			}
 		}
-
+	case UpdateEvent:
+		log.Println("UpdateEvvvent")
+		signalPeerConnections(h)
 	}
 }
 func signalPeerConnections(h *SSEHub) {
@@ -202,7 +208,7 @@ func attemptSync(h *SSEHub) bool {
 			return true
 		}
 		flusher, _ := ps.client.w.(http.Flusher)
-
+		log.Println(messageJSON)
 		fmt.Fprintf(ps.client.w, "data: %s\n\n", messageJSON)
 		flusher.Flush()
 	}
@@ -212,8 +218,11 @@ func dispatchKeyFrame(h *SSEHub) {
 	for ps := range h.clients {
 		for _, receiver := range ps.peerConnection.GetReceivers() {
 			if receiver.Track() == nil {
+				log.Printf("dispatchKeyFrame Track nil C: %s", ps.client.userName)
 				continue
 			}
+			t := receiver.Track()
+			log.Printf("dispatchKeyFrame C: %s TID: %s Kind: %s MSID: %s", ps.client.userName, t.ID(), t.Kind(), t.Msid())
 
 			_ = ps.peerConnection.WriteRTCP([]rtcp.Packet{
 				&rtcp.PictureLossIndication{

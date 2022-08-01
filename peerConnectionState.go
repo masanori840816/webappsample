@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/pion/webrtc/v3"
 )
 
@@ -68,13 +70,16 @@ func NewPeerConnectionState(client *SSEClient, peerConnection *webrtc.PeerConnec
 		}
 	})
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
-		_, ok := <-heartbeat
+		/*_, ok := <-heartbeat
 		if ok {
 			changeConnectionState <- p
 			heartbeat <- 1
-		}
+		}*/
+		log.Printf("State: %s", p.String())
 	})
 	peerConnection.OnTrack(func(t *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
+
+		log.Printf("OnTrack ID:%s Kind:%s MSID:%s Codec:%s SSRC:%d StreamID:%s", t.ID(), t.Kind(), t.Msid(), t.Codec().MimeType, t.SSRC(), t.StreamID())
 		_, ok := <-heartbeat
 		if ok {
 			addTrack <- t

@@ -31,9 +31,16 @@ export function init(url: string) {
     webrtc = new WebRtcController();
     webrtc.addEvents((message) => sendAnswer(message),
         (message) => sendCandidate(message),
-        (message) => view.addReceivedDataChannelValue(message));
+        (message) => view.addReceivedDataChannelValue(message),
+        () => { 
+            if(!hasAnyTexts(userName)) {
+                return;
+            }
+            sse.sendMessage({userName, event: "update", data: "{}"});
+        });
     webrtc.init();
     view = new MainView();
+    view.addEvents((used) => webrtc.switchLocalVideoUsage(used));
 }
 export function sendTextDataChannel() {
     const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;

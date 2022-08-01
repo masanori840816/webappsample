@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"log"
 
 	"github.com/pion/webrtc/v3"
 )
@@ -12,6 +13,7 @@ const (
 	OfferEvent     string = "offer"
 	AnswerEvent    string = "answer"
 	CandidateEvent string = "candidate"
+	UpdateEvent    string = "update"
 )
 
 type ClientMessage struct {
@@ -66,5 +68,6 @@ func NewCandidateMessageJSON(userName string, candidate *webrtc.ICECandidate) (s
 	if err != nil {
 		return "", err
 	}
+	log.Printf("NewCandidate: %s", string(jsonValue))
 	return string(jsonValue), nil
 }
