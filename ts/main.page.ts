@@ -28,18 +28,16 @@ export function close() {
 export function init(url: string) {
     sse = new SseController(url);
     sse.addEvents((value) => handleReceivedMessage(value));
+    
+    view = new MainView();
     webrtc = new WebRtcController();
     webrtc.addEvents((message) => sendAnswer(message),
         (message) => sendCandidate(message),
         (message) => view.addReceivedDataChannelValue(message),
-        () => { 
-            if(!hasAnyTexts(userName)) {
-                return;
-            }
-            sse.sendMessage({userName, event: "update", data: "{}"});
-        });
-    webrtc.init();
-    view = new MainView();
+        () => updateConnection(),
+        (stream, kind) => view.addRemoteTrack(stream, kind),
+        (id, kind) => view.removeRemoteTrack(id, kind));
+    webrtc.init(view.checkLocalVideoUsed());
     view.addEvents((used) => webrtc.switchLocalVideoUsage(used));
 }
 export function sendTextDataChannel() {
@@ -96,4 +94,10 @@ function checkIsClientMessage(value: any): value is ClientMessage {
         return false;
     }
     return true;
+}
+function updateConnection() {
+    if(!hasAnyTexts(userName)) {
+        return;
+    }
+    sse.sendMessage({userName, event: "update", data: "{}"});
 }

@@ -8,18 +8,20 @@ export class WebRtcController {
     private candidateSentEvent: ((data: RTCIceCandidate) => void) | null = null;
     private dataChannelMessageEvent: ((data: string | Uint8Array) => void) | null = null;
     private connectionUpdatedEvent: (() => void) | null = null;
+    private streamReceivedEvent: ((stream: MediaStream, kind: "video"|"audio") => void)|null = null;
+    private streamRemovedEvent: ((id: string, kind: "video"|"audio") => void)|null = null;
     private localVideo: HTMLVideoElement;
     public constructor() {
         this.localVideo = document.getElementById("local_video") as HTMLVideoElement;
     }
-    public init() {
+    public init(videoUsed: boolean) {
         this.localVideo.addEventListener("canplay", () => {
             const width = 320;
             const height = this.localVideo.videoHeight / (this.localVideo.videoWidth / width);
             this.localVideo.setAttribute("width", width.toString());
             this.localVideo.setAttribute("height", height.toString());
         }, false);
-        navigator.mediaDevices.getUserMedia({ video: this.checkParams("video"), audio: true })
+        navigator.mediaDevices.getUserMedia({ video: videoUsed, audio: true })
             .then(stream => {
                 this.webcamStream = stream;
             });
@@ -27,11 +29,15 @@ export class WebRtcController {
     public addEvents(answerSentEvent: (data: RTCSessionDescriptionInit) => void,
         candidateSentEvent: (data: RTCIceCandidate) => void,
         dataChannelMessageEvent: (data: string | Uint8Array) => void,
-        connectionUpdatedEvent: () => void) {
+        connectionUpdatedEvent: () => void,
+        streamReceivedEvent: ((stream: MediaStream, kind: "video"|"audio") => void),
+        streamRemovedEvent: ((id: string, kind: "video"|"audio") => void)) {
         this.answerSentEvent = answerSentEvent;
         this.candidateSentEvent = candidateSentEvent;
         this.dataChannelMessageEvent = dataChannelMessageEvent;
         this.connectionUpdatedEvent = connectionUpdatedEvent;
+        this.streamReceivedEvent = streamReceivedEvent;
+        this.streamRemovedEvent = streamRemovedEvent;
     }
     public handleOffer(data: RTCSessionDescription | null | undefined) {
         if (this.peerConnection == null ||
@@ -84,25 +90,18 @@ export class WebRtcController {
             console.log(ev);
         };
         this.peerConnection.ontrack = (ev) => {
-            if (ev.track.kind === "audio" ||
-                ev.streams[0] == null) {
+            if(this.streamReceivedEvent == null ||
+                ev.streams[0] == null ||
+                (ev.track.kind !== "audio" && ev.track.kind !== "video")) {
                 return;
             }
+            const stream = ev.streams[0];
+            const kind = ev.track.kind;
+            this.streamReceivedEvent(stream, ev.track.kind);
 
-            const remoteVideo = document.createElement("video");
-            remoteVideo.srcObject = ev.streams[0];
-            remoteVideo.autoplay = true;
-            remoteVideo.controls = true;
-            const videoArea = document.getElementById("remote_video_area") as HTMLElement;
-            videoArea.appendChild(remoteVideo);
-
-            ev.track.onmute = () => {
-                remoteVideo.play();
-            };
-
-            ev.streams[0].onremovetrack = () => {
-                if (remoteVideo.parentNode) {
-                    remoteVideo.parentNode.removeChild(remoteVideo);
+            stream.onremovetrack = () => {
+                if (this.streamRemovedEvent != null) {
+                    this.streamRemovedEvent(stream.id, kind);
                 }
             };
         };
@@ -201,14 +200,5 @@ export class WebRtcController {
                 this.connectionUpdatedEvent();
             }
         }
-    }
-    private checkParams(key: string): boolean {
-        const splittedUrls = location.href.split("/");
-        const params = new URLSearchParams(splittedUrls[splittedUrls.length - 1]);
-        const target = params.get(key);
-        if (target == null || target.length <= 0) {
-            return false;
-        }
-        return target === "true";
     }
 }
