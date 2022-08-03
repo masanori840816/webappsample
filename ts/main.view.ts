@@ -38,7 +38,7 @@ export class MainView {
     public checkLocalVideoUsed(): boolean {
         return this.localVideoUsed.checked;
     }
-    public addRemoteTrack(stream: MediaStream, kind: "video"|"audio"): void {
+    public addRemoteTrack(stream: MediaStream, kind: "video"|"audio", id?: string): void {
         if(this.tracks.some(t => t.id === stream.id)) {
             if(kind === "audio") {
                 return;
@@ -53,26 +53,21 @@ export class MainView {
         remoteTrack.controls = false;
         this.remoteTrackArea.appendChild(remoteTrack);
         this.tracks.push({
-            id: stream.id,
+            id: (id == null)? stream.id: id,
             kind,
             element: remoteTrack,
         });
-        console.log("Add");
-        
-        console.log(this.tracks);
         
     }
     public removeRemoteTrack(id: string, kind: "video"|"audio"): void {
         const targets = this.tracks.filter(t => t.id === id);
-        if(targets.length <= 0 ||
-            targets[0] == null) {
+        if(targets.length <= 0) {
             return;
         }
         if(kind === "video") {
-            const audioTracks = ((targets[0].element as HTMLVideoElement).srcObject as MediaStream).getAudioTracks();
-            if(audioTracks.length > 0 &&
-                audioTracks[0] != null) {
-                this.addRemoteTrack(new MediaStream([audioTracks[0]]), "audio");
+            const audioTrack = this.getAudioTrack(targets[0]?.element);
+            if(audioTrack != null) {
+                this.addRemoteTrack(new MediaStream([audioTrack]), "audio", id);
             }
         }
         for(const t of targets) {
@@ -83,5 +78,22 @@ export class MainView {
             newTracks.push(t);
         }
         this.tracks = newTracks;
+    }
+    private getAudioTrack(target: HTMLElement|null|undefined): MediaStreamTrack|null {
+        if(target == null ||
+            !(target instanceof HTMLVideoElement)){
+            return null;
+        }
+        if(target.srcObject == null ||
+            !("getAudioTracks" in target.srcObject) ||
+            (typeof target.srcObject.getAudioTracks !== "function")) {
+            return null;
+        }
+        const tracks = target.srcObject.getAudioTracks();
+        if(tracks.length <= 0 ||
+            tracks[0] == null) {
+            return null;
+        }
+        return tracks[0];
     }
 }
