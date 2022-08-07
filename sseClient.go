@@ -22,6 +22,13 @@ func newSSEClient(userName string, w http.ResponseWriter) *SSEClient {
 	}
 }
 
+type ClientName struct {
+	Name string `json:"name"`
+}
+type ClientNames struct {
+	Names []ClientName `json:"names"`
+}
+
 func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	userName, err := getParam(r, "user")
 	if err != nil {

@@ -33,7 +33,6 @@ func newSSEHub() *SSEHub {
 	}
 }
 func (h *SSEHub) close() {
-	log.Println("Hub closed")
 	close(h.broadcast)
 	close(h.register)
 	close(h.unregister)
@@ -52,10 +51,12 @@ func (h *SSEHub) run() {
 		case client := <-h.register:
 			h.clients[client] = true
 			signalPeerConnections(h)
+			sendClientNames(h)
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				signalPeerConnections(h)
+				sendClientNames(h)
 			}
 		case track := <-h.addTrack:
 			trackLocal, err := webrtc.NewTrackLocalStaticRTP(track.Codec().RTPCodecCapability,
@@ -137,7 +138,6 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 			}
 		}
 	case UpdateEvent:
-		log.Println("UpdateEvvvent")
 		signalPeerConnections(h)
 	}
 }
@@ -238,5 +238,26 @@ func sendDataChannelMessage(h *SSEHub, message ReceivedDataChannelMessage) {
 			ps.channels.SendMessage(message)
 		}
 	}
+}
+func sendClientNames(h *SSEHub) {
+	names := ClientNames{
+		Names: make([]ClientName, len(h.clients)),
+	}
 
+	i := 0
+	for ps := range h.clients {
+		names.Names[i] = ClientName{
+			Name: ps.client.userName,
+		}
+	}
+	message, err := NewClientNameMessageJSON(names)
+	if err != nil {
+		log.Printf("Error sendClientNames Message: %s", err.Error())
+		return
+	}
+	for ps := range h.clients {
+		flusher, _ := ps.client.w.(http.Flusher)
+		fmt.Fprintf(ps.client.w, "data: %s\n\n", message)
+		flusher.Flush()
+	}
 }

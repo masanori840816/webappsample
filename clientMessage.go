@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	TextEvent      string = "text"
-	OfferEvent     string = "offer"
-	AnswerEvent    string = "answer"
-	CandidateEvent string = "candidate"
-	UpdateEvent    string = "update"
+	TextEvent       string = "text"
+	OfferEvent      string = "offer"
+	AnswerEvent     string = "answer"
+	CandidateEvent  string = "candidate"
+	UpdateEvent     string = "update"
+	ClientNameEvent string = "clientName"
 )
 
 type ClientMessage struct {
@@ -69,5 +70,21 @@ func NewCandidateMessageJSON(userName string, candidate *webrtc.ICECandidate) (s
 		return "", err
 	}
 	log.Printf("NewCandidate: %s", string(jsonValue))
+	return string(jsonValue), nil
+}
+func NewClientNameMessageJSON(names ClientNames) (string, error) {
+	clientNamesJson, err := json.Marshal(names)
+	if err != nil {
+		return "", err
+	}
+	message := ClientMessage{
+		Event:    ClientNameEvent,
+		UserName: "",
+		Data:     string(clientNamesJson),
+	}
+	jsonValue, err := json.Marshal(message)
+	if err != nil {
+		return "", err
+	}
 	return string(jsonValue), nil
 }

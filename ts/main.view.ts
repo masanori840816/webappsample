@@ -44,8 +44,6 @@ export class MainView {
                 return;
             }
             this.removeRemoteTrack(stream.id, "audio");
-            console.log(this.tracks);
-            
         }
         const remoteTrack = document.createElement(kind);
         remoteTrack.srcObject = stream;
@@ -56,8 +54,7 @@ export class MainView {
             id: (id == null)? stream.id: id,
             kind,
             element: remoteTrack,
-        });
-        
+        });        
     }
     public removeRemoteTrack(id: string, kind: "video"|"audio"): void {
         const targets = this.tracks.filter(t => t.id === id);
