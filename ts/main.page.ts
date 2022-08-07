@@ -60,6 +60,12 @@ function handleReceivedMessage(value: string) {
         case "candidate":
             webrtc.handleCandidate(JSON.parse(message.data));
             break;
+        case "clientName":
+            view.updateClientNames(JSON.parse(message.data));
+            break;
+        default:
+            console.error(`Invalid message type ${value}`);            
+            break;
     }
 }
 function sendAnswer(data: RTCSessionDescriptionInit) {
@@ -81,12 +87,6 @@ function checkIsClientMessage(value: any): value is ClientMessage {
     }
     if(("event" in value &&
         typeof value["event"] === "string") === false) {
-        return false;
-    }
-    if(value.event !== "text" &&
-        value.event !== "offer" &&
-        value.event !== "answer" &&
-        value.event !== "candidate") {
         return false;
     }
     if(("data" in value &&

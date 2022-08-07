@@ -1,7 +1,12 @@
 import * as urlParam from "./urlParamGetter";
+import { ClientName, ClientNames } from "./webrtc.type";
 type RemoteTrack = {
     id: string,
     kind: "video"|"audio",
+    element: HTMLElement,
+};
+type ConnectedClient = {
+    name: ClientName,
     element: HTMLElement,
 };
 export class MainView {
@@ -10,12 +15,16 @@ export class MainView {
     private localVideoUsed: HTMLInputElement;
     private remoteTrackArea: HTMLElement;
     private tracks = new Array<RemoteTrack>();
+    private clientArea: HTMLElement;
+    private connectedClients: ConnectedClient[];
     public constructor() {
         this.receivedTextArea = document.getElementById("received_text_area") as HTMLElement;
         this.receivedDataChannelArea = document.getElementById("received_datachannel_area") as HTMLElement;
         this.localVideoUsed = document.getElementById("local_video_usage") as HTMLInputElement;
         this.localVideoUsed.checked = urlParam.getBoolParam("video");
         this.remoteTrackArea = document.getElementById("remote_track_area") as HTMLElement;
+        this.clientArea = document.getElementById("client_names") as HTMLElement;
+        this.connectedClients = new Array<ConnectedClient>();
     }
     public addEvents(videoUsageChanged: (used: boolean) => void): void {
         this.localVideoUsed.onchange = () =>
@@ -75,6 +84,33 @@ export class MainView {
             newTracks.push(t);
         }
         this.tracks = newTracks;
+    }
+    public updateClientNames(names: ClientNames): void {
+        if(names == null) {
+            console.warn("updateClientNames were null");
+            return;
+        }
+        const newClients = new Array<ConnectedClient>();
+        for(const c of this.connectedClients) {
+            const clientName = c.name.name;
+            if(names.names.some(n => n.name === clientName)) {
+                newClients.push(c);
+            } else {
+                this.clientArea.removeChild(c.element);
+            }
+        }
+        for(const n of names.names) {
+            const clientName = n;
+            if(this.connectedClients.some(c => c.name.name === clientName.name) === false) {
+                const newElement = document.createElement("div");
+                newElement.textContent = clientName.name;
+                this.clientArea.appendChild(newElement);
+                this.connectedClients.push({
+                    name: clientName,
+                    element: newElement,
+                });
+            }
+        }
     }
     private getAudioTrack(target: HTMLElement|null|undefined): MediaStreamTrack|null {
         if(target == null ||

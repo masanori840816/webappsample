@@ -249,6 +249,7 @@ func sendClientNames(h *SSEHub) {
 		names.Names[i] = ClientName{
 			Name: ps.client.userName,
 		}
+		i += 1
 	}
 	message, err := NewClientNameMessageJSON(names)
 	if err != nil {
