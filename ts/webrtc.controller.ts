@@ -11,8 +11,11 @@ export class WebRtcController {
     private streamReceivedEvent: ((stream: MediaStream, kind: "video"|"audio") => void)|null = null;
     private streamRemovedEvent: ((id: string, kind: "video"|"audio") => void)|null = null;
     private localVideo: HTMLVideoElement;
+    private localAudioContext: AudioContext;
+    private localAudioNode: MediaStreamAudioSourceNode|null = null;
     public constructor() {
         this.localVideo = document.getElementById("local_video") as HTMLVideoElement;
+        this.localAudioContext = new AudioContext();
     }
     public init(videoUsed: boolean) {
         this.localVideo.addEventListener("canplay", () => {
@@ -21,9 +24,24 @@ export class WebRtcController {
             this.localVideo.setAttribute("width", width.toString());
             this.localVideo.setAttribute("height", height.toString());
         }, false);
+        
         navigator.mediaDevices.getUserMedia({ video: videoUsed, audio: true })
-            .then(stream => {
+            .then(async stream => {
                 this.webcamStream = stream;
+                await this.localAudioContext.audioWorklet.addModule("./js/volume-measurer-processor.js");
+                this.localAudioNode = this.localAudioContext.createMediaStreamSource(stream);
+                const volumeMeterNode = new AudioWorkletNode(this.localAudioContext, "volume-measurer");   
+                
+                volumeMeterNode.port.onmessage = async ({data}) => {
+                    if(this.peerConnection?.connectionState === "connected") {
+                        // If the threshold established between 0 and 1 is exceeded,
+                        // it is considered to be talking
+                        if(data > 0.05) {
+                            console.log(`talking V:${data}`);
+                        }
+                    }
+                };
+                this.localAudioNode.connect(volumeMeterNode).connect(this.localAudioContext.destination);
             });
     }
     public addEvents(answerSentEvent: (data: RTCSessionDescriptionInit) => void,
@@ -86,8 +104,12 @@ export class WebRtcController {
             }]
         });
 
-        this.peerConnection.onconnectionstatechange = (ev) => {
-            console.log(ev);
+        this.peerConnection.onconnectionstatechange = () => {
+            if(this.peerConnection?.connectionState === "connected") {
+                this.localAudioContext.resume();
+            } else {
+                this.localAudioContext.suspend();
+            }
         };
         this.peerConnection.ontrack = (ev) => {
             if(this.streamReceivedEvent == null ||
