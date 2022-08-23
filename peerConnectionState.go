@@ -70,11 +70,11 @@ func NewPeerConnectionState(client *SSEClient, peerConnection *webrtc.PeerConnec
 		}
 	})
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
-		/*_, ok := <-heartbeat
+		_, ok := <-heartbeat
 		if ok {
 			changeConnectionState <- p
 			heartbeat <- 1
-		}*/
+		}
 		log.Printf("State: %s", p.String())
 	})
 	peerConnection.OnTrack(func(t *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {

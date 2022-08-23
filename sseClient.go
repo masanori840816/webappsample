@@ -84,6 +84,14 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 			hub.addTrack <- track
 		case connectionState := <-ps.changeConnectionState:
 			switch connectionState {
+			case webrtc.PeerConnectionStateConnected:
+				for _, rcv := range peerConnection.GetReceivers() {
+					track := rcv.Track()
+					if track == nil {
+						continue
+					}
+					log.Printf("RECV ID: %s MID: %s MSID: %s Kind: %s", track.ID(), track.RID(), track.Msid(), track.Kind())
+				}
 			case webrtc.PeerConnectionStateFailed:
 				return
 			case webrtc.PeerConnectionStateClosed:

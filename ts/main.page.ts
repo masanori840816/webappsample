@@ -37,7 +37,7 @@ export function init(url: string) {
         () => updateConnection(),
         (stream, kind) => view.addRemoteTrack(stream, kind),
         (id, kind) => view.removeRemoteTrack(id, kind));
-    webrtc.init(view.checkLocalVideoUsed());
+    webrtc.init(url, view.checkLocalVideoUsed());
     view.addEvents((used) => webrtc.switchLocalVideoUsage(used));
 }
 export function sendTextDataChannel() {
@@ -55,7 +55,10 @@ function handleReceivedMessage(value: string) {
             view.addReceivedText({ user: message.userName, message: message.data });
             break;
         case "offer":
-            webrtc.handleOffer(JSON.parse(message.data));
+            if(webrtc.handleOffer(JSON.parse(message.data)) !== true) {
+                close();
+            }
+
             break;
         case "candidate":
             webrtc.handleCandidate(JSON.parse(message.data));

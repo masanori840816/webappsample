@@ -221,9 +221,6 @@ func dispatchKeyFrame(h *SSEHub) {
 				log.Printf("dispatchKeyFrame Track nil C: %s", ps.client.userName)
 				continue
 			}
-			t := receiver.Track()
-			log.Printf("dispatchKeyFrame C: %s TID: %s Kind: %s MSID: %s", ps.client.userName, t.ID(), t.Kind(), t.Msid())
-
 			_ = ps.peerConnection.WriteRTCP([]rtcp.Packet{
 				&rtcp.PictureLossIndication{
 					MediaSSRC: uint32(receiver.Track().SSRC()),

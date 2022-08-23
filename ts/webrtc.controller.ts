@@ -17,7 +17,7 @@ export class WebRtcController {
         this.localVideo = document.getElementById("local_video") as HTMLVideoElement;
         this.localAudioContext = new AudioContext();
     }
-    public init(videoUsed: boolean) {
+    public init(baseUrl: string, videoUsed: boolean) {
         this.localVideo.addEventListener("canplay", () => {
             const width = 320;
             const height = this.localVideo.videoHeight / (this.localVideo.videoWidth / width);
@@ -28,7 +28,7 @@ export class WebRtcController {
         navigator.mediaDevices.getUserMedia({ video: videoUsed, audio: true })
             .then(async stream => {
                 this.webcamStream = stream;
-                await this.localAudioContext.audioWorklet.addModule("./js/volume-measurer-processor.js");
+                await this.localAudioContext.audioWorklet.addModule(`${baseUrl}/js/volume-measurer-processor.js`);
                 this.localAudioNode = this.localAudioContext.createMediaStreamSource(stream);
                 const volumeMeterNode = new AudioWorkletNode(this.localAudioContext, "volume-measurer");   
                 
@@ -42,7 +42,8 @@ export class WebRtcController {
                     }
                 };
                 this.localAudioNode.connect(volumeMeterNode).connect(this.localAudioContext.destination);
-            });
+            })
+            .catch(err => console.error(err));
     }
     public addEvents(answerSentEvent: (data: RTCSessionDescriptionInit) => void,
         candidateSentEvent: (data: RTCIceCandidate) => void,
@@ -57,11 +58,11 @@ export class WebRtcController {
         this.streamReceivedEvent = streamReceivedEvent;
         this.streamRemovedEvent = streamRemovedEvent;
     }
-    public handleOffer(data: RTCSessionDescription | null | undefined) {
+    public handleOffer(data: RTCSessionDescription | null | undefined): boolean {
         if (this.peerConnection == null ||
             data == null) {
             console.error("PeerConnection|SDP was null");
-            return;
+            return false;
         }
         this.peerConnection.setRemoteDescription(data);
         this.peerConnection.createAnswer()
@@ -73,6 +74,7 @@ export class WebRtcController {
                     this.answerSentEvent(answer);
                 }
             });
+        return true;
     }
     public handleCandidate(data: RTCIceCandidate | null | undefined) {
         if (this.peerConnection == null ||

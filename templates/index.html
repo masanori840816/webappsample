@@ -3,7 +3,7 @@
     <head>
         <title>WebRTC Sample</title>
         <meta charset="utf-8">
-        <link href="css/site.css" rel="stylesheet" />
+        <link href="{{.}}/css/site.css" rel="stylesheet" />
     </head>
     <body>
         <input type="text" id="user_name" placeholder="User Name">
@@ -32,7 +32,7 @@
             </div>
             <div id="received_datachannel_area"></div>
         </div>
-        <script src="/js/main.page.js"></script>
+        <script src="{{.}}/js/main.page.js"></script>
         <script>Page.init('{{.}}');</script>
     </body>
 </html>
