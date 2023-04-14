@@ -8,42 +8,44 @@ let sse: SseController;
 let webrtc: WebRtcController;
 let view: MainView;
 let userName = ""
-export function connect(): void {
-    const userNameInput = document.getElementById("user_name") as HTMLInputElement;
-    userName = userNameInput.value;
-    webrtc.connect();
-    sse.connect(userName);
-}
-export function send() {
-    if(!hasAnyTexts(userName)) {
-        return;
+window.Page = {
+    connect(): void {
+        const userNameInput = document.getElementById("user_name") as HTMLInputElement;
+        userName = userNameInput.value;
+        webrtc.connect();
+        sse.connect(userName);
+    },
+    send() {
+        if(!hasAnyTexts(userName)) {
+            return;
+        }
+        const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
+        sse.sendMessage({ event: "text", userName, data: messageInput.value });
+    },
+    close() {
+        userName = "";
+        sse.close();
+    },
+    init(url: string) {
+        sse = new SseController(url);
+        sse.addEvents((value) => handleReceivedMessage(value));
+        
+        view = new MainView();
+        webrtc = new WebRtcController();
+        webrtc.addEvents((message) => sendAnswer(message),
+            (message) => sendCandidate(message),
+            (message) => view.addReceivedDataChannelValue(message),
+            () => updateConnection(),
+            (stream, kind) => view.addRemoteTrack(stream, kind),
+            (id, kind) => view.removeRemoteTrack(id, kind));
+        webrtc.init(url, view.checkLocalVideoUsed());
+        view.addEvents((used) => webrtc.switchLocalVideoUsage(used));
+    },
+    sendTextDataChannel() {
+        const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
+        webrtc.sendTextDataChannel(messageInput.value);
     }
-    const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
-    sse.sendMessage({ event: "text", userName, data: messageInput.value });
-}
-export function close() {
-    userName = "";
-    sse.close();
-}
-export function init(url: string) {
-    sse = new SseController(url);
-    sse.addEvents((value) => handleReceivedMessage(value));
-    
-    view = new MainView();
-    webrtc = new WebRtcController();
-    webrtc.addEvents((message) => sendAnswer(message),
-        (message) => sendCandidate(message),
-        (message) => view.addReceivedDataChannelValue(message),
-        () => updateConnection(),
-        (stream, kind) => view.addRemoteTrack(stream, kind),
-        (id, kind) => view.removeRemoteTrack(id, kind));
-    webrtc.init(url, view.checkLocalVideoUsed());
-    view.addEvents((used) => webrtc.switchLocalVideoUsage(used));
-}
-export function sendTextDataChannel() {
-    const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
-    webrtc.sendTextDataChannel(messageInput.value);
-}
+};
 function handleReceivedMessage(value: string) {
     const message = JSON.parse(value);
     if(!checkIsClientMessage(message)) {
