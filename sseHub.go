@@ -77,7 +77,7 @@ func (h *SSEHub) run() {
 	}
 }
 func updateTrackValue(h *SSEHub, track *webrtc.TrackRemote) {
-	log.Printf("updateTrackValue Track: %s Kind: %s MSID: %s", track.ID(), track.Kind(), track.Msid())
+	log.Printf("updateTrackValue Track: %s Kind: %s MSID: %s MIME TYPE: %s", track.ID(), track.Kind(), track.Msid(), track.Codec().MimeType)
 	defer func() {
 		delete(h.trackLocals, track.ID())
 		signalPeerConnections(h)
@@ -103,7 +103,6 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 
 		for client := range h.clients {
 			flusher, _ := client.client.w.(http.Flusher)
-
 			fmt.Fprintf(client.client.w, "data: %s\n\n", jsonText)
 			flusher.Flush()
 		}
