@@ -1,4 +1,6 @@
 import * as dataChannel from "./dataChannels"
+import { hasAnyTexts } from "./hasAnyTexts";
+import { preferVideoCodec } from "./videoCodecs/preferVideoCodec";
 
 export class WebRtcController {
     private webcamStream: MediaStream | null = null;
@@ -58,13 +60,30 @@ export class WebRtcController {
         this.streamReceivedEvent = streamReceivedEvent;
         this.streamRemovedEvent = streamRemovedEvent;
     }
-    public handleOffer(data: RTCSessionDescription | null | undefined): boolean {
+    public handleOffer(data: RTCSessionDescription | null | undefined, preferredMimeType: string|null): boolean {
         if (this.peerConnection == null ||
             data == null) {
             console.error("PeerConnection|SDP was null");
             return false;
         }
         this.peerConnection.setRemoteDescription(data);
+        if(hasAnyTexts(preferredMimeType)) {
+            this.peerConnection.getTransceivers()
+            .forEach((transceiver) => {
+                const kind = transceiver.sender.track?.kind;
+                if(kind == null) {
+                    return;
+                }
+                if (kind === "video") {
+                    let codecs = RTCRtpSender.getCapabilities(kind)?.codecs;
+                    if(codecs == null) {
+                        return;
+                    }
+                    codecs = preferVideoCodec(codecs, preferredMimeType);                    
+                    transceiver.setCodecPreferences([...codecs, ...codecs]);
+                }
+            });
+        }
         this.peerConnection.createAnswer()
             .then(answer => {
                 if (this.peerConnection != null) {

@@ -55,16 +55,19 @@ function handleReceivedMessage(value: string) {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let offerData: any;
+    let preferredMimeType: string|null = null;
     switch(message.event) {
         case "text":
             view.addReceivedText({ user: message.userName, message: message.data });
             break;
         case "offer":
-            offerData = JSON.parse(message.data);            
+            offerData = JSON.parse(message.data);
             if(view.getForceVideoCodec()) {
                 offerData.sdp = removeVideoCodec(offerData.sdp, view.getPreferredVideoCodec());
-            }            
-            if(webrtc.handleOffer(offerData) !== true) {
+            } else {
+                preferredMimeType = view.getPreferredVideoCodec();
+            }       
+            if(webrtc.handleOffer(offerData, preferredMimeType) !== true) {
                 close();
             }
             break;
