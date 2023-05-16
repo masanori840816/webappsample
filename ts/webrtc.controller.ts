@@ -37,7 +37,7 @@ export class WebRtcController {
                         // If the threshold established between 0 and 1 is exceeded,
                         // it is considered to be talking
                         if(data > 0.05) {
-                            console.log(`talking V:${data}`);
+                            //console.log(`talking V:${data}`);
                         }
                     }
                 };

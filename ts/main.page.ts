@@ -53,17 +53,18 @@ function handleReceivedMessage(value: string) {
         console.error(`Invalid message type ${value}`);
         return;
     }
-    let offerData = "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let offerData: any;
     switch(message.event) {
         case "text":
             view.addReceivedText({ user: message.userName, message: message.data });
             break;
         case "offer":
-            offerData = message.data;            
+            offerData = JSON.parse(message.data);            
             if(view.getForceVideoCodec()) {
-                offerData = removeVideoCodec(message.data, view.getPreferredVideoCodec());
-            }
-            if(webrtc.handleOffer(JSON.parse(offerData)) !== true) {
+                offerData.sdp = removeVideoCodec(offerData.sdp, view.getPreferredVideoCodec());
+            }            
+            if(webrtc.handleOffer(offerData) !== true) {
                 close();
             }
             break;
