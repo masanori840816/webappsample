@@ -17,6 +17,14 @@ export class MainView {
     private tracks = new Array<RemoteTrack>();
     private clientArea: HTMLElement;
     private connectedClients: ConnectedClient[];
+    private forceVideoCodecCheck: HTMLInputElement;
+    private preferVideoCodecSelector: HTMLSelectElement;
+    public getForceVideoCodec(): boolean {
+        return this.forceVideoCodecCheck.checked;
+    }
+    public getPreferredVideoCodec(): string {
+        return this.preferVideoCodecSelector.value;
+    }
     public constructor() {
         this.receivedTextArea = document.getElementById("received_text_area") as HTMLElement;
         this.receivedDataChannelArea = document.getElementById("received_datachannel_area") as HTMLElement;
@@ -25,6 +33,9 @@ export class MainView {
         this.remoteTrackArea = document.getElementById("remote_track_area") as HTMLElement;
         this.clientArea = document.getElementById("client_names") as HTMLElement;
         this.connectedClients = new Array<ConnectedClient>();
+        this.forceVideoCodecCheck = document.getElementById("force_video_codec_check") as HTMLInputElement;
+        this.preferVideoCodecSelector = document.getElementById("video_codec_selector") as HTMLSelectElement;
+        this.addVideoCodecNames();
     }
     public addEvents(videoUsageChanged: (used: boolean) => void): void {
         this.localVideoUsed.onchange = () =>
@@ -128,5 +139,26 @@ export class MainView {
             return null;
         }
         return tracks[0];
+    }
+    private addVideoCodecNames() {
+        const codecs = RTCRtpSender.getCapabilities("video")?.codecs;
+        if(codecs == null) {
+            return;
+        }
+        const addedMimeTypes: string[] = [];
+        const option = document.createElement("option");
+        option.value = "";
+        option.text = "";
+        this.preferVideoCodecSelector.appendChild(option);
+        for(const c of codecs) {
+            if(addedMimeTypes.some(t => c.mimeType === t)) {
+                continue;
+            }
+            addedMimeTypes.push(c.mimeType);
+            const option = document.createElement("option");
+            option.value = c.mimeType;
+            option.text = c.mimeType;
+            this.preferVideoCodecSelector.appendChild(option);
+        }
     }
 }

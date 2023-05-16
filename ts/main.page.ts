@@ -1,6 +1,7 @@
 import { hasAnyTexts } from "./hasAnyTexts";
 import { MainView } from "./main.view";
 import { SseController } from "./sse.controller";
+import { removeVideoCodec } from "./videoCodecs/videoCodecRemover";
 import { WebRtcController } from "./webrtc.controller";
 import { ClientMessage } from "./webrtc.type";
 
@@ -52,15 +53,19 @@ function handleReceivedMessage(value: string) {
         console.error(`Invalid message type ${value}`);
         return;
     }
+    let offerData = "";
     switch(message.event) {
         case "text":
             view.addReceivedText({ user: message.userName, message: message.data });
             break;
         case "offer":
-            if(webrtc.handleOffer(JSON.parse(message.data)) !== true) {
+            offerData = message.data;            
+            if(view.getForceVideoCodec()) {
+                offerData = removeVideoCodec(message.data, view.getPreferredVideoCodec());
+            }
+            if(webrtc.handleOffer(JSON.parse(offerData)) !== true) {
                 close();
             }
-
             break;
         case "candidate":
             webrtc.handleCandidate(JSON.parse(message.data));

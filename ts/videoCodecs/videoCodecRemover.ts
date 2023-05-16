@@ -1,3 +1,5 @@
+import { hasAnyTexts } from "../hasAnyTexts";
+
 /**
  * Remove video codecs from SDP except specified ones
  * resource: https://stackoverflow.com/questions/52738290/how-to-remove-video-codecs-in-webrtc-sdp
@@ -5,7 +7,10 @@
  * @param codec 
  * @returns 
  */
-export function removeVideoCodec(orgsdp: string, codec: string) {
+export function removeVideoCodec(orgsdp: string, codec: string): string {
+    if(!hasAnyTexts(codec)) {
+        return orgsdp;
+    }
     const internalFunc = (sdp: string): string => {
         const codecre = new RegExp('(a=rtpmap:(\\d*) ' + codec + '/90000\\r\\n)');
         const rtpmaps = sdp.match(codecre);        
