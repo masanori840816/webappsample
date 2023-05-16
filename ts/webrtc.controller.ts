@@ -161,6 +161,17 @@ export class WebRtcController {
     public switchLocalVideoUsage(used: boolean): void {
         if (this.peerConnection == null ||
             this.webcamStream == null) {
+            navigator.mediaDevices.getUserMedia({ video: used, audio: true })
+                .then(stream => {
+                    this.webcamStream = stream;
+                    if(used) {
+                        this.localVideo.srcObject = stream;
+                        this.localVideo.play();
+                    } else {
+                        this.localVideo.pause();
+                        this.localVideo.srcObject = null;
+                    }
+                });
             return;
         }
         const tracks = this.webcamStream.getVideoTracks();
