@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log"
 
-	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v4"
 )
 
 const (

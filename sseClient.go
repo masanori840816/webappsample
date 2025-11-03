@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v4"
 )
 
 type SSEClient struct {

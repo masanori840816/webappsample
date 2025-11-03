@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v4"
 )
 
 type WebRTCDataChannelStates struct {
