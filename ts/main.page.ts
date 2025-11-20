@@ -39,7 +39,7 @@ window.Page = {
             () => updateConnection(),
             (stream, kind) => view.addRemoteTrack(stream, kind),
             (id, kind) => view.removeRemoteTrack(id, kind));
-        webrtc.init(url, view.checkLocalVideoUsed());
+        webrtc.init(view.checkLocalVideoUsed());
         view.addEvents((used) => webrtc.switchLocalVideoUsage(used));
     },
     sendTextDataChannel() {

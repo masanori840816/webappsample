@@ -14,12 +14,12 @@ export class WebRtcController {
     private streamRemovedEvent: ((id: string, kind: "video"|"audio") => void)|null = null;
     private localVideo: HTMLVideoElement;
     private localAudioContext: AudioContext;
-    private localAudioNode: MediaStreamAudioSourceNode|null = null;
     public constructor() {
         this.localVideo = document.getElementById("local_video") as HTMLVideoElement;
         this.localAudioContext = new AudioContext();
     }
-    public init(baseUrl: string, videoUsed: boolean) {
+    public init(videoUsed: boolean) {
+        console.log("init");
         this.localVideo.addEventListener("canplay", () => {
             const width = 320;
             const height = this.localVideo.videoHeight / (this.localVideo.videoWidth / width);
@@ -30,20 +30,7 @@ export class WebRtcController {
         navigator.mediaDevices.getUserMedia({ video: videoUsed, audio: true })
             .then(async stream => {
                 this.webcamStream = stream;
-                await this.localAudioContext.audioWorklet.addModule(`${baseUrl}/js/volume-measurer-processor.js`);
-                this.localAudioNode = this.localAudioContext.createMediaStreamSource(stream);
-                const volumeMeterNode = new AudioWorkletNode(this.localAudioContext, "volume-measurer");   
-                
-                volumeMeterNode.port.onmessage = async ({data}) => {
-                    if(this.peerConnection?.connectionState === "connected") {
-                        // If the threshold established between 0 and 1 is exceeded,
-                        // it is considered to be talking
-                        if(data > 0.05) {
-                            //console.log(`talking V:${data}`);
-                        }
-                    }
-                };
-                this.localAudioNode.connect(volumeMeterNode).connect(this.localAudioContext.destination);
+               
             })
             .catch(err => console.error(err));
     }
@@ -82,6 +69,7 @@ export class WebRtcController {
                     codecs = preferVideoCodec(codecs, preferredMimeType);                    
                     transceiver.setCodecPreferences([...codecs, ...codecs]);
                 }
+                console.log(`this.peerConnection.getTransceivers() ${kind}` );
             });
         }
         this.peerConnection.createAnswer()
@@ -115,6 +103,7 @@ export class WebRtcController {
         target.dataChannel.send(value);
     }
     public connect() {
+        console.log("connect");
         if (this.webcamStream == null) {
             console.error("Local video was null");
             return;
@@ -126,13 +115,15 @@ export class WebRtcController {
         });
 
         this.peerConnection.onconnectionstatechange = () => {
-            if(this.peerConnection?.connectionState === "connected") {
+            console.log(`state changed ${this.peerConnection?.connectionState }`);
+            /*if(this.peerConnection?.connectionState === "connected") {
                 this.localAudioContext.resume();
             } else {
                 this.localAudioContext.suspend();
-            }
+            }*/
         };
         this.peerConnection.ontrack = (ev) => {
+            console.log("ontrack " + ev.track.kind);
             if(this.streamReceivedEvent == null ||
                 ev.streams[0] == null ||
                 (ev.track.kind !== "audio" && ev.track.kind !== "video")) {
@@ -148,11 +139,15 @@ export class WebRtcController {
                 }
             };
         };
+        console.log("try getting tracks");
         this.webcamStream.getTracks().forEach(track => {
             if (this.peerConnection == null ||
                 this.webcamStream == null) {
+                    
+        console.error("try getting tracks peerconnection or webacm was null");
                 return;
             }
+            console.log(`get track ${track.kind}`);
             this.peerConnection.addTrack(track, this.webcamStream);
         });
         this.peerConnection.onicecandidate = ev => {
