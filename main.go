@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"webappsample/logs"
 )
 
 type templateHandler struct {
@@ -27,6 +29,10 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	err := logs.ConfigLogger()
+	if err != nil {
+		log.Panicln(err.Error())
+	}
 	settings, err := LoadAppSettings()
 	if err != nil {
 		log.Println(err.Error())

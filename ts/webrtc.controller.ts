@@ -116,11 +116,11 @@ export class WebRtcController {
 
         this.peerConnection.onconnectionstatechange = () => {
             console.log(`state changed ${this.peerConnection?.connectionState }`);
-            /*if(this.peerConnection?.connectionState === "connected") {
+            if(this.peerConnection?.connectionState === "connected") {
                 this.localAudioContext.resume();
             } else {
                 this.localAudioContext.suspend();
-            }*/
+            }
         };
         this.peerConnection.ontrack = (ev) => {
             console.log("ontrack " + ev.track.kind);

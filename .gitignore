@@ -4,6 +4,7 @@ templates/js/*
 !templates/js/volume-measurer-processor.js
 node_modules
 files/*
+*.log
 
 # Created by https://www.toptal.com/developers/gitignore/api/go
 # Edit at https://www.toptal.com/developers/gitignore?templates=go
