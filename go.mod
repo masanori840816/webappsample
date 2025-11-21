@@ -1,6 +1,6 @@
-module sample/webappsample
+module webappsample
 
-go 1.21
+go 1.25.4
 
 require (
 	github.com/pion/rtcp v1.2.15
