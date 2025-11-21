@@ -15,12 +15,13 @@ const (
 	CandidateEvent  string = "candidate"
 	UpdateEvent     string = "update"
 	ClientNameEvent string = "clientName"
+	HeartbeatEvent  string = "heartbeat"
 )
 
 type ClientMessage struct {
-	Event    string `json:"event"`
-	UserName string `json:"userName"`
-	Data     string `json:"data"`
+	MessageType string `json:"event"`
+	UserName    string `json:"userName"`
+	Data        string `json:"data"`
 }
 
 func NewOfferMessage(userName string, offer webrtc.SessionDescription) (*ClientMessage, error) {
@@ -29,9 +30,9 @@ func NewOfferMessage(userName string, offer webrtc.SessionDescription) (*ClientM
 		return nil, err
 	}
 	return &ClientMessage{
-		Event:    OfferEvent,
-		UserName: userName,
-		Data:     string(offerString),
+		MessageType: OfferEvent,
+		UserName:    userName,
+		Data:        string(offerString),
 	}, nil
 }
 func NewOfferMessageJSON(userName string, offer webrtc.SessionDescription) (string, error) {
@@ -55,9 +56,9 @@ func NewCandidateMessage(userName string, candidate *webrtc.ICECandidate) (*Clie
 		return nil, err
 	}
 	return &ClientMessage{
-		Event:    CandidateEvent,
-		UserName: userName,
-		Data:     string(candidateString),
+		MessageType: CandidateEvent,
+		UserName:    userName,
+		Data:        string(candidateString),
 	}, nil
 }
 func NewCandidateMessageJSON(userName string, candidate *webrtc.ICECandidate) (string, error) {
@@ -78,13 +79,25 @@ func NewClientNameMessageJSON(names ClientNames) (string, error) {
 		return "", err
 	}
 	message := ClientMessage{
-		Event:    ClientNameEvent,
-		UserName: "",
-		Data:     string(clientNamesJson),
+		MessageType: ClientNameEvent,
+		UserName:    "",
+		Data:        string(clientNamesJson),
 	}
 	jsonValue, err := json.Marshal(message)
 	if err != nil {
 		return "", err
 	}
 	return string(jsonValue), nil
+}
+
+func NewHeartbeatMessageJSON() string {
+	message := ClientMessage{
+		MessageType: HeartbeatEvent,
+		Data:        ":",
+	}
+	jsonValue, err := json.Marshal(message)
+	if err != nil {
+		return ""
+	}
+	return string(jsonValue)
 }

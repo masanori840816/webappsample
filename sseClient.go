@@ -120,7 +120,6 @@ func sendSSEMessage(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 	if err != nil {
 		log.Println(err.Error())
 		j, _ := json.Marshal(GetFailed("Failed reading values from body"))
-
 		w.Write(j)
 		return
 	}

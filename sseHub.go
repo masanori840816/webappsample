@@ -40,7 +40,14 @@ func (h *SSEHub) close() {
 	close(h.broadcastDataChannelMessage)
 }
 func (h *SSEHub) run() {
-	defer h.close()
+	heartbeatMessage := NewHeartbeatMessageJSON()
+	keyFrameTicker := time.NewTicker(time.Second * 3)
+	heartbeat := time.NewTicker(time.Minute)
+	defer func() {
+		h.close()
+		keyFrameTicker.Stop()
+		heartbeat.Stop()
+	}()
 	go func() {
 		for range time.NewTicker(time.Second * 3).C {
 			dispatchKeyFrame(h)
@@ -73,6 +80,12 @@ func (h *SSEHub) run() {
 			handleReceivedMessage(h, message)
 		case message := <-h.broadcastDataChannelMessage:
 			sendDataChannelMessage(h, message)
+		case <-heartbeat.C:
+			for pc := range h.clients {
+				flusher, _ := pc.client.w.(http.Flusher)
+				fmt.Fprintf(pc.client.w, "data: %s\n\n", heartbeatMessage)
+				flusher.Flush()
+			}
 		}
 	}
 }
@@ -96,7 +109,7 @@ func updateTrackValue(h *SSEHub, track *webrtc.TrackRemote) {
 	}
 }
 func handleReceivedMessage(h *SSEHub, message ClientMessage) {
-	switch message.Event {
+	switch message.MessageType {
 	case TextEvent:
 		m, _ := json.Marshal(message)
 		jsonText := string(m)
