@@ -43,8 +43,8 @@ func main() {
 	go hub.run()
 
 	if len(target) > 0 {
-		http.Handle(fmt.Sprintf("%s/css/", target), http.StripPrefix(fmt.Sprintf("/%s", target), http.FileServer(http.Dir("templates"))))
-		http.Handle(fmt.Sprintf("%s/js/", target), http.StripPrefix(fmt.Sprintf("/%s", target), http.FileServer(http.Dir("templates"))))
+		http.Handle(fmt.Sprintf("%s/css/", target), http.StripPrefix(fmt.Sprintf("%s", target), http.FileServer(http.Dir("templates"))))
+		http.Handle(fmt.Sprintf("%s/js/", target), http.StripPrefix(fmt.Sprintf("%s", target), http.FileServer(http.Dir("templates"))))
 	} else {
 		http.Handle("/css/", http.FileServer(http.Dir("templates")))
 		http.Handle("/js/", http.FileServer(http.Dir("templates")))
