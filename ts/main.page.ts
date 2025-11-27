@@ -25,6 +25,7 @@ window.Page = {
     },
     close() {
         userName = "";
+        webrtc.close();
         sse.close();
     },
     init(url: string) {

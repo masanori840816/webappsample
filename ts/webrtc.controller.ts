@@ -200,6 +200,13 @@ export class WebRtcController {
             this.removeVideoTrack(this.peerConnection);
         }
     }
+    public close() {
+        if(this.peerConnection == null) {
+            return;
+        }
+        this.peerConnection.close();
+        this.peerConnection = null;
+    }
     private addVideoTrack(peerConnection: RTCPeerConnection) {
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
