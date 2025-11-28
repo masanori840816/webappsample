@@ -78,6 +78,9 @@ function handleReceivedMessage(value: string) {
         case "clientName":
             view.updateClientNames(JSON.parse(message.data));
             break;
+        case "heartbeat":
+            // Do nothing
+            break;
         default:
             console.error(`Invalid message type ${value}`);            
             break;

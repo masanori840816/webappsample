@@ -103,14 +103,13 @@ export class WebRtcController {
         target.dataChannel.send(value);
     }
     public connect() {
-        console.log("connect");
         if (this.webcamStream == null) {
-            console.error("Local video was null");
+            console.error("Failed connection: Local video was null");
             return;
         }
         this.peerConnection = new RTCPeerConnection({
             iceServers: [{
-                urls: `stun:stun.l.google.com:19302`,  // A STUN server              
+                urls: `stun:stun.l.google.com:19302`,
             }]
         });
 
@@ -139,12 +138,10 @@ export class WebRtcController {
                 }
             };
         };
-        console.log("try getting tracks");
         this.webcamStream.getTracks().forEach(track => {
             if (this.peerConnection == null ||
-                this.webcamStream == null) {
-                    
-        console.error("try getting tracks peerconnection or webacm was null");
+                this.webcamStream == null) {                    
+                console.error(`Failed getting tracks PC:${this.peerConnection == null} Cam:${this.webcamStream == null}`);
                 return;
             }
             console.log(`get track ${track.kind}`);

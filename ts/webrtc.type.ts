@@ -1,5 +1,5 @@
 export type ClientMessage = {
-    event: "text"|"offer"|"answer"|"candidate"|"update"|"clientName",
+    event: "text"|"offer"|"answer"|"candidate"|"update"|"clientName"|"heartbeat",
     userName: string,
     data: string,
 };
