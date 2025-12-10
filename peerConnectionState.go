@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"sync"
 
 	"github.com/pion/webrtc/v4"
 )
@@ -14,9 +15,17 @@ type PeerConnectionState struct {
 	changeConnectionState chan webrtc.PeerConnectionState
 	addTrack              chan *webrtc.TrackRemote
 	heartbeat             chan int
+	closeLock             sync.Mutex
+	closed                bool
 }
 
 func (ps *PeerConnectionState) Close() {
+	ps.closeLock.Lock()
+	defer ps.closeLock.Unlock()
+	if ps.closed {
+		return
+	}
+	ps.closed = true
 	for i := 0; i < len(ps.heartbeat); i++ {
 		<-ps.heartbeat
 	}
@@ -59,8 +68,23 @@ func NewPeerConnectionState(client *SSEClient, peerConnection *webrtc.PeerConnec
 
 	heartbeat <- 1
 
+	ps := &PeerConnectionState{
+		peerConnection:        peerConnection,
+		client:                client,
+		channels:              channels,
+		candidateFound:        candidateFound,
+		changeConnectionState: changeConnectionState,
+		addTrack:              addTrack,
+		heartbeat:             heartbeat,
+	}
+
 	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
 		if i == nil {
+			return
+		}
+		ps.closeLock.Lock()
+		defer ps.closeLock.Unlock()
+		if ps.closed {
 			return
 		}
 		_, ok := <-heartbeat
@@ -70,6 +94,11 @@ func NewPeerConnectionState(client *SSEClient, peerConnection *webrtc.PeerConnec
 		}
 	})
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
+		ps.closeLock.Lock()
+		defer ps.closeLock.Unlock()
+		if ps.closed {
+			return
+		}
 		_, ok := <-heartbeat
 		if ok {
 			changeConnectionState <- p
@@ -78,7 +107,11 @@ func NewPeerConnectionState(client *SSEClient, peerConnection *webrtc.PeerConnec
 		log.Printf("State: %s", p.String())
 	})
 	peerConnection.OnTrack(func(t *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
-
+		ps.closeLock.Lock()
+		defer ps.closeLock.Unlock()
+		if ps.closed {
+			return
+		}
 		log.Printf("OnTrack ID:%s Kind:%s MSID:%s Codec:%s SSRC:%d StreamID:%s", t.ID(), t.Kind(), t.Msid(), t.Codec().MimeType, t.SSRC(), t.StreamID())
 		_, ok := <-heartbeat
 		if ok {
@@ -87,13 +120,5 @@ func NewPeerConnectionState(client *SSEClient, peerConnection *webrtc.PeerConnec
 		}
 	})
 
-	return &PeerConnectionState{
-		peerConnection:        peerConnection,
-		client:                client,
-		channels:              channels,
-		candidateFound:        candidateFound,
-		changeConnectionState: changeConnectionState,
-		addTrack:              addTrack,
-		heartbeat:             heartbeat,
-	}, nil
+	return ps, nil
 }
