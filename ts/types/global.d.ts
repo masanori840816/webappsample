@@ -7,6 +7,6 @@ export interface MainPageApi {
     connect: () => void,
     send: () => void,
     close: () => void,
-    init: (url: string, iceServerText: string) => void,
+    init: (url: string, iceServerJSON: string) => void,
     sendTextDataChannel: () => void
 }

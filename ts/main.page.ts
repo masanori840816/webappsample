@@ -29,8 +29,8 @@ window.Page = {
         webrtc.close();
         sse.close();
     },
-    init(url: string, iceServerText: string) {
-        iceServer = JSON.parse(iceServerText) as ICEServer;
+    init(url: string, iceServerJSON: string) {
+        iceServer = JSON.parse(iceServerJSON);       
         sse = new SseController(url);
         sse.addEvents((value) => handleReceivedMessage(value));
         
