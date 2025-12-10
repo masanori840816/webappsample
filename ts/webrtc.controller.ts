@@ -1,6 +1,7 @@
 import * as dataChannel from "./dataChannels"
 import { hasAnyTexts } from "./hasAnyTexts";
 import { preferVideoCodec } from "./videoCodecs/preferVideoCodec";
+import { ICEServer } from "./webrtc.type";
 
 export class WebRtcController {
     private webcamStream: MediaStream | null = null;
@@ -102,14 +103,16 @@ export class WebRtcController {
         }
         target.dataChannel.send(value);
     }
-    public connect() {
+    public connect(server: ICEServer) {
         if (this.webcamStream == null) {
             console.error("Failed connection: Local video was null");
             return;
         }
         this.peerConnection = new RTCPeerConnection({
             iceServers: [{
-                urls: `stun:stun.l.google.com:19302`,
+                urls: server.urls,
+                username: server.username,
+                credential: server.credential,
             }]
         });
 

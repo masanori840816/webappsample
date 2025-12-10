@@ -9,3 +9,8 @@ export type ClientName = {
 export type ClientNames = {
 	names: ClientName[]
 }
+export type ICEServer = {
+    urls: string,
+    username: string,
+    credential: string,
+}

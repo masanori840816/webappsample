@@ -3,17 +3,18 @@ import { MainView } from "./main.view";
 import { SseController } from "./sse.controller";
 import { removeVideoCodec } from "./videoCodecs/videoCodecRemover";
 import { WebRtcController } from "./webrtc.controller";
-import { ClientMessage } from "./webrtc.type";
+import { ClientMessage, ICEServer } from "./webrtc.type";
 
 let sse: SseController;
 let webrtc: WebRtcController;
 let view: MainView;
 let userName = ""
+let iceServer: ICEServer;
 window.Page = {
     connect(): void {
         const userNameInput = document.getElementById("user_name") as HTMLInputElement;
         userName = userNameInput.value;
-        webrtc.connect();
+        webrtc.connect(iceServer);
         sse.connect(userName);
     },
     send() {
@@ -28,7 +29,8 @@ window.Page = {
         webrtc.close();
         sse.close();
     },
-    init(url: string) {
+    init(url: string, iceServerText: string) {
+        iceServer = JSON.parse(iceServerText) as ICEServer;
         sse = new SseController(url);
         sse.addEvents((value) => handleReceivedMessage(value));
         
