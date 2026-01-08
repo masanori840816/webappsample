@@ -5,13 +5,18 @@
         <meta charset="utf-8">
         <link href="{{.URL}}/css/videoedit.page.css" rel="stylesheet" />
     </head>
-    <body>
+    <body class="p-0 m-0 w[100vw] h[100vh]">
         <h1>Video Edit Sample</h1>
         <div class="video-area">
-            <video class="w-full h-full" src="{{.URL}}/videos/sample.mp4" loop controls>Video stream not available.</video>
+            <video class="w-full h-full" 
+                id="remote_video"
+                src="{{.URL}}/videos/sample.mp4" loop controls>Video stream not available.</video>
         </div>
-        <div class="w-[50vw] h-[10vh] bg-amber-100">
-            <button onclick="VideoPage.capture()">Capture</button>
+        <div class="w-[50vw] h-[10vh] bg-amber-100 flex flex-row align-middle justify-around">
+            <button class="w-1/4 h-1/4 border-solid border-black border[1px]" onclick="VideoPage.capture()">Capture</button>
+        </div>
+        <div >
+            <img id="captured_image">
         </div>
         <script src="{{.URL}}/js/videoedit.page.js"></script>
     </body>
