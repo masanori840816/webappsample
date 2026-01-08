@@ -41,13 +41,9 @@ func main() {
 	hub := *newSSEHub()
 	go hub.run()
 
-	if len(urlPrefix) > 0 {
-		http.Handle(fmt.Sprintf("%s/css/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
-		http.Handle(fmt.Sprintf("%s/js/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
-	} else {
-		http.Handle("/css/", http.FileServer(http.Dir("templates")))
-		http.Handle("/js/", http.FileServer(http.Dir("templates")))
-	}
+	http.Handle(fmt.Sprintf("%s/css/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
+	http.Handle(fmt.Sprintf("%s/js/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
+	http.Handle(fmt.Sprintf("%s/videos/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
 	http.HandleFunc(fmt.Sprintf("%s/sse/message", urlPrefix), func(w http.ResponseWriter, r *http.Request) {
 		sendSSEMessage(w, r, &hub)
 	})

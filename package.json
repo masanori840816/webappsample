@@ -6,7 +6,10 @@
   "scripts": {
     "build": "npm-run-all build:*",
     "build:mainpage": "node ./esbuilds/mainpage.build.mjs",
-    "build:videoedit": "node ./esbuilds/videoedit.build.mjs"
+    "build:videoedit": "node ./esbuilds/videoedit.build.mjs",
+    "css": "npm-run-all css:*",
+    "css:mainpage": "npx @tailwindcss/cli -i ./tailwindcss/site.css -o ./templates/css/site.css",
+    "css:videoedit": "npx @tailwindcss/cli -i ./tailwindcss/videoedit.page.css -o ./templates/css/videoedit.page.css"
   },
   "author": "Masui Masanori",
   "license": "MIT",

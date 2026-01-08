@@ -3,14 +3,17 @@
     <head>
         <title>Video Edit Sample</title>
         <meta charset="utf-8">
+        <link href="{{.URL}}/css/videoedit.page.css" rel="stylesheet" />
     </head>
     <body>
         <h1>Video Edit Sample</h1>
         <div class="video-area">
-            <video></video>
+            <video class="w-full h-full" src="{{.URL}}/videos/sample.mp4" loop controls>Video stream not available.</video>
+        </div>
+        <div class="w-[50vw] h-[10vh] bg-amber-100">
+            <button onclick="VideoPage.capture()">Capture</button>
         </div>
         <script src="{{.URL}}/js/videoedit.page.js"></script>
-        <script>VideoPage.capture();</script>
     </body>
 
 </html>
