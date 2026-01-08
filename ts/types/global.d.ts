@@ -14,4 +14,5 @@ export interface MainPageApi {
 export interface VideoEditPageApi {
     capture: () => void,
     download: () => void,
+    mark: () => void,
 }
