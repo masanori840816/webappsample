@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "npm-run-all build:*",
-    "build:mainpage": "node ./esbuilds/mainpage.build.mjs"
+    "build:mainpage": "node ./esbuilds/mainpage.build.mjs",
+    "build:videoedit": "node ./esbuilds/videoedit.build.mjs"
   },
   "author": "Masui Masanori",
   "license": "MIT",
