@@ -12,6 +12,7 @@ import (
 )
 
 type SSEHub struct {
+	name                        string
 	clients                     map[*PeerConnectionState]bool
 	broadcast                   chan ClientMessage
 	register                    chan *PeerConnectionState
@@ -21,8 +22,9 @@ type SSEHub struct {
 	broadcastDataChannelMessage chan ReceivedDataChannelMessage
 }
 
-func newSSEHub() *SSEHub {
+func NewSSEHub(name string) *SSEHub {
 	return &SSEHub{
+		name:                        name,
 		clients:                     make(map[*PeerConnectionState]bool),
 		broadcast:                   make(chan ClientMessage),
 		register:                    make(chan *PeerConnectionState),
@@ -39,7 +41,7 @@ func (h *SSEHub) close() {
 	close(h.addTrack)
 	close(h.broadcastDataChannelMessage)
 }
-func (h *SSEHub) run() {
+func (h *SSEHub) run(unregister chan *SSEHub) {
 	heartbeatMessage := NewHeartbeatMessageJSON()
 	keyFrameTicker := time.NewTicker(time.Second * 3)
 	heartbeat := time.NewTicker(time.Minute)
@@ -47,6 +49,7 @@ func (h *SSEHub) run() {
 		h.close()
 		keyFrameTicker.Stop()
 		heartbeat.Stop()
+		unregister <- h
 	}()
 	go func() {
 		for range time.NewTicker(time.Second * 3).C {

@@ -10,6 +10,8 @@ let webrtc: WebRtcController;
 let view: MainView;
 let userName = ""
 let iceServer: ICEServer;
+// TODO: get from the page
+const targetSample = "sample";
 window.Page = {
     connect(): void {
         const userNameInput = document.getElementById("user_name") as HTMLInputElement;
@@ -22,7 +24,7 @@ window.Page = {
             return;
         }
         const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
-        sse.sendMessage({ event: "text", userName, data: messageInput.value });
+        sse.sendMessage({ event: "text", userName, target: targetSample, data: messageInput.value });
     },
     close() {
         userName = "";
@@ -92,13 +94,13 @@ function sendAnswer(data: RTCSessionDescriptionInit) {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: "answer", data: JSON.stringify(data)});
+    sse.sendMessage({userName, event: "answer", target: targetSample, data: JSON.stringify(data)});
 }
 function sendCandidate(data: RTCIceCandidate) {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: "candidate", data: JSON.stringify(data)});
+    sse.sendMessage({userName, event: "candidate", target: targetSample, data: JSON.stringify(data)});
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function checkIsClientMessage(value: any): value is ClientMessage {
@@ -119,5 +121,5 @@ function updateConnection() {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: "update", data: "{}"});
+    sse.sendMessage({userName, event: "update", target: targetSample, data: "{}"});
 }

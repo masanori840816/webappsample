@@ -30,7 +30,7 @@ type ClientNames struct {
 }
 
 func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
-	userName, err := getParam(r, "user")
+	userName, err := GetParam(r, "user")
 	if err != nil {
 		log.Println(err.Error())
 		fmt.Fprint(w, "The parameters have no names")

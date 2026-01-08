@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -38,17 +39,32 @@ func main() {
 		log.Println(err.Error())
 	}
 	urlPrefix := getStrippingTargetPrefix(settings.URL)
-	hub := *newSSEHub()
-	go hub.run()
+	groups := *NewChatGroups()
+	defer func() {
+		groups.close <- 0
+	}()
 
 	http.Handle(fmt.Sprintf("%s/css/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
 	http.Handle(fmt.Sprintf("%s/js/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
 	http.Handle(fmt.Sprintf("%s/videos/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
 	http.HandleFunc(fmt.Sprintf("%s/sse/message", urlPrefix), func(w http.ResponseWriter, r *http.Request) {
-		sendSSEMessage(w, r, &hub)
+		message, err := GetClientMessage(w, r)
+		if err != nil {
+			j, _ := json.Marshal(GetFailed("Failed receiving the messages"))
+			w.Write(j)
+			return
+		}
+		hub := groups.GetOrCreateRoom(message.Target)
+		sendSSEMessage(w, r, hub)
 	})
 	http.HandleFunc(fmt.Sprintf("%s/sse/", urlPrefix), func(w http.ResponseWriter, r *http.Request) {
-		registerSSEClient(w, r, &hub)
+		roomName, err := GetParam(r, "target")
+		if err != nil {
+			log.Println(err.Error())
+			return
+		}
+		hub := groups.GetOrCreateRoom(roomName)
+		registerSSEClient(w, r, hub)
 	})
 	http.Handle("/", &templateHandler{filename: "index.html", settings: settings})
 	http.Handle("/video", &templateHandler{filename: "video.html", settings: settings})
