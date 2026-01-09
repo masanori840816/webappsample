@@ -9,9 +9,9 @@ export class SseController {
     public constructor(baseUrl: string) {
         this.baseUrl = baseUrl;
     }
-    public connect(userName: string) {
+    public connect(userName: string, groupName: string) {
 
-        this.es = new EventSource(`${this.baseUrl}/sse?user=${userName}`);        
+        this.es = new EventSource(`${this.baseUrl}/sse?user=${userName}&groupName=${groupName}`);        
         this.es.onmessage = (ev) => {
             if(!hasAnyTexts(ev.data) ||
                 this.messageReceivedEvent == null) {

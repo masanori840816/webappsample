@@ -17,14 +17,14 @@ window.Page = {
         const userNameInput = document.getElementById("user_name") as HTMLInputElement;
         userName = userNameInput.value;
         webrtc.connect(iceServer);
-        sse.connect(userName);
+        sse.connect(userName, targetSample);
     },
     send() {
         if(!hasAnyTexts(userName)) {
             return;
         }
         const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
-        sse.sendMessage({ event: "text", userName, target: targetSample, data: messageInput.value });
+        sse.sendMessage({ event: "text", userName, groupName: targetSample, data: messageInput.value });
     },
     close() {
         userName = "";
@@ -94,13 +94,13 @@ function sendAnswer(data: RTCSessionDescriptionInit) {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: "answer", target: targetSample, data: JSON.stringify(data)});
+    sse.sendMessage({userName, event: "answer", groupName: targetSample, data: JSON.stringify(data)});
 }
 function sendCandidate(data: RTCIceCandidate) {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: "candidate", target: targetSample, data: JSON.stringify(data)});
+    sse.sendMessage({userName, event: "candidate", groupName: targetSample, data: JSON.stringify(data)});
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function checkIsClientMessage(value: any): value is ClientMessage {
@@ -121,5 +121,5 @@ function updateConnection() {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: "update", target: targetSample, data: "{}"});
+    sse.sendMessage({userName, event: "update", groupName: targetSample, data: "{}"});
 }
