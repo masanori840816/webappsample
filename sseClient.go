@@ -30,39 +30,48 @@ type ClientNames struct {
 }
 
 func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.WriteHeader(200)
+	// For pushing data to clients, I call "flusher.Flush()"
+	flusher, _ := w.(http.Flusher)
 	userName, err := GetParam(r, "user")
 	if err != nil {
 		log.Println(err.Error())
-		fmt.Fprint(w, "The parameters have no names")
+		rejectConnection(w, r, "Missing or invalid user parameter")
 		return
+	}
+	// Duplicated username error
+	for c := range hub.clients {
+		if c.client.userName == userName {
+			rejectConnection(w, r, "The user name is already used")
+			return
+		}
 	}
 	newClient := newSSEClient(userName, w)
 	peerConnection, err := NewPeerConnection()
 	if err != nil {
 		log.Println(err.Error())
-		fmt.Fprint(w, "Failed creating PeerConnection")
+		rejectConnection(w, r, "Failed to connect Server Sent Events")
 		return
 	}
 	dc, err := NewWebRTCDataChannelStates(peerConnection)
 	if err != nil {
+		peerConnection.Close()
 		log.Println(err.Error())
-		fmt.Fprint(w, "Failed adding DataChannel")
+		rejectConnection(w, r, "Failed to create data channel")
 		return
 	}
 	ps, err := NewPeerConnectionState(newClient, peerConnection, dc)
 	if err != nil {
 		log.Println(err.Error())
-		fmt.Fprint(w, "Failed connection")
+		rejectConnection(w, r, "Failed to connect Server Sent Events")
 		return
 	}
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
 	hub.register <- ps
 
-	// For pushing data to clients, I call "flusher.Flush()"
-	flusher, _ := w.(http.Flusher)
 	defer func() {
 		hub.unregister <- ps
 		dc.Close()
@@ -97,20 +106,37 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 			case webrtc.PeerConnectionStateClosed:
 				return
 			}
-		case message := <-dc.MessageCh:
+		case message := <-ps.channels.MessageCh:
 			if message.Error != nil {
-				log.Println(message.Error.Error())
+				log.Printf("DataChannelError: %s\n", message.Error.Error())
 				return
 			}
-			hub.broadcastDataChannelMessage <- ReceivedDataChannelMessage{
-				ID:       message.ID,
-				UserName: userName,
-				Message:  message.Message,
+			// Send back heartbeat message.
+			if message.ID == HeartBeatChID {
+				for id, dc := range ps.channels.DataChannels {
+					if id == message.ID {
+						dc.Send(message.Message.Data)
+					}
+				}
+			} else {
+				hub.broadcastDataChannelMessage <- receivedDataChannelMessage{
+					UserName: userName,
+					Message:  message,
+				}
 			}
 		case <-r.Context().Done():
 			// when "es.close()" is called, this loop operation will be ended.
 			return
 		}
+	}
+}
+func rejectConnection(w http.ResponseWriter, r *http.Request, message string) {
+	flusher, _ := w.(http.Flusher)
+	_, _ = fmt.Fprintf(w, "data: %s\n\n", NewErrorMessageJSON(message))
+	flusher.Flush()
+	for range r.Context().Done() {
+		// when "es.close()" is called, this loop operation will be ended.
+		return
 	}
 }
 func sendSSEMessage(w http.ResponseWriter, r *http.Request, hub *SSEHub) {

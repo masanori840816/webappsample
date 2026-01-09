@@ -2,9 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pion/rtcp"
@@ -19,7 +22,11 @@ type SSEHub struct {
 	unregister                  chan *PeerConnectionState
 	trackLocals                 map[string]*webrtc.TrackLocalStaticRTP
 	addTrack                    chan *webrtc.TrackRemote
-	broadcastDataChannelMessage chan ReceivedDataChannelMessage
+	broadcastDataChannelMessage chan receivedDataChannelMessage
+}
+type receivedDataChannelMessage struct {
+	UserName string
+	Message  WebRTCDataChannelMessage
 }
 
 func NewSSEHub(name string) *SSEHub {
@@ -31,10 +38,10 @@ func NewSSEHub(name string) *SSEHub {
 		unregister:                  make(chan *PeerConnectionState),
 		trackLocals:                 map[string]*webrtc.TrackLocalStaticRTP{},
 		addTrack:                    make(chan *webrtc.TrackRemote),
-		broadcastDataChannelMessage: make(chan ReceivedDataChannelMessage),
+		broadcastDataChannelMessage: make(chan receivedDataChannelMessage),
 	}
 }
-func (h *SSEHub) close() {
+func (h *SSEHub) CloseSSEHub() {
 	close(h.broadcast)
 	close(h.register)
 	close(h.unregister)
@@ -46,33 +53,33 @@ func (h *SSEHub) run(unregister chan *SSEHub) {
 	keyFrameTicker := time.NewTicker(time.Second * 3)
 	heartbeat := time.NewTicker(time.Minute)
 	defer func() {
-		h.close()
 		keyFrameTicker.Stop()
 		heartbeat.Stop()
 		unregister <- h
-	}()
-	go func() {
-		for range time.NewTicker(time.Second * 3).C {
-			dispatchKeyFrame(h)
-		}
 	}()
 	for {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
 			signalPeerConnections(h)
-			sendClientNames(h)
+			sendCurrentClientNames(h)
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				signalPeerConnections(h)
-				sendClientNames(h)
+				// Delete the group when there are no more clients
+				if len(h.clients) <= 0 {
+					return
+				}
 			}
+			// send connected client names
+			sendCurrentClientNames(h)
+
 		case track := <-h.addTrack:
 			trackLocal, err := webrtc.NewTrackLocalStaticRTP(track.Codec().RTPCodecCapability,
 				track.ID(), track.StreamID())
 			if err != nil {
-				log.Println(err.Error())
+				log.Printf("AddTrackError: %s", err.Error())
 				return
 			}
 			h.trackLocals[track.ID()] = trackLocal
@@ -82,7 +89,17 @@ func (h *SSEHub) run(unregister chan *SSEHub) {
 		case message := <-h.broadcast:
 			handleReceivedMessage(h, message)
 		case message := <-h.broadcastDataChannelMessage:
-			sendDataChannelMessage(h, message)
+			for pc := range h.clients {
+				if pc.client.userName != message.UserName {
+					for id, dc := range pc.channels.DataChannels {
+						if id == message.Message.ID {
+							dc.Send(message.Message.Message.Data)
+						}
+					}
+				}
+			}
+		case <-keyFrameTicker.C:
+			dispatchKeyFrame(h)
 		case <-heartbeat.C:
 			for pc := range h.clients {
 				flusher, _ := pc.client.w.(http.Flusher)
@@ -99,14 +116,20 @@ func updateTrackValue(h *SSEHub, track *webrtc.TrackRemote) {
 		signalPeerConnections(h)
 	}()
 
-	buf := make([]byte, 1500)
+	buf := make([]byte, 1048576)
 
 	for {
 		i, _, err := track.Read(buf)
 		if err != nil {
+			log.Printf("updateTrackValue FailedReading Err: %s", err.Error())
+			return
+		}
+		if _, ok := h.trackLocals[track.ID()]; !ok {
+			log.Printf("updateTrackValue trackLocals doesn't have TID: %s", track.ID())
 			return
 		}
 		if _, err = h.trackLocals[track.ID()].Write(buf[:i]); err != nil {
+			log.Printf("updateTrackValue FailedWriting Err: %s", err.Error())
 			return
 		}
 	}
@@ -123,23 +146,21 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 			flusher.Flush()
 		}
 	case CandidateEvent:
-		log.Printf("R Candidate: %s", message.Data)
-		candidate := webrtc.ICECandidateInit{}
-		if err := json.Unmarshal([]byte(message.Data), &candidate); err != nil {
+		candidate, err := parseICECandidate(message.Data)
+		if err != nil {
 			log.Println(err)
 			return
 		}
 		for pc := range h.clients {
 			if pc.client.userName == message.UserName {
 				if err := pc.peerConnection.AddICECandidate(candidate); err != nil {
-					log.Println(err)
+					log.Printf("AddICECandidate erorr:%s", err.Error())
 					return
 				}
 			}
 		}
 	case AnswerEvent:
 		answer := webrtc.SessionDescription{}
-		log.Printf("R Answer: %s", message.Data)
 		if err := json.Unmarshal([]byte(message.Data), &answer); err != nil {
 			log.Println(err)
 			return
@@ -147,14 +168,30 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 		for pc := range h.clients {
 			if pc.client.userName == message.UserName {
 				if err := pc.peerConnection.SetRemoteDescription(answer); err != nil {
-					log.Println(err)
+					log.Printf("SetRemoteDesc Error: %s", err.Error())
 					return
 				}
 			}
 		}
-	case UpdateEvent:
-		signalPeerConnections(h)
 	}
+}
+func parseICECandidate(value string) (webrtc.ICECandidateInit, error) {
+	splittedData := strings.Split(value, "|")
+	if len(splittedData) < 3 {
+		log.Println(value)
+		return webrtc.ICECandidateInit{}, errors.New("Failed to read ICE Candidate")
+	}
+	lineIndex64, err := strconv.ParseUint(splittedData[1], 10, 16)
+	if err != nil {
+		return webrtc.ICECandidateInit{}, err
+	}
+	lineIndex := uint16(lineIndex64)
+	candidate := webrtc.ICECandidateInit{
+		SDPMLineIndex: &lineIndex,
+		SDPMid:        &splittedData[2],
+		Candidate:     splittedData[0],
+	}
+	return candidate, nil
 }
 func signalPeerConnections(h *SSEHub) {
 	defer func() {
@@ -177,7 +214,9 @@ func signalPeerConnections(h *SSEHub) {
 }
 func attemptSync(h *SSEHub) bool {
 	for ps := range h.clients {
-		if ps.peerConnection.ConnectionState() == webrtc.PeerConnectionStateClosed {
+		if ps.peerConnection.ConnectionState() != webrtc.PeerConnectionStateConnected &&
+			ps.peerConnection.ConnectionState() != webrtc.PeerConnectionStateConnecting &&
+			ps.peerConnection.ConnectionState() != webrtc.PeerConnectionStateNew {
 			delete(h.clients, ps)
 			// We modified the slice, start from the beginning
 			return true
@@ -223,7 +262,7 @@ func attemptSync(h *SSEHub) bool {
 			return true
 		}
 		flusher, _ := ps.client.w.(http.Flusher)
-		log.Println(messageJSON)
+		log.Printf("Offer C: %s V: %s", ps.client.userName, messageJSON)
 		fmt.Fprintf(ps.client.w, "data: %s\n\n", messageJSON)
 		flusher.Flush()
 	}
@@ -233,7 +272,6 @@ func dispatchKeyFrame(h *SSEHub) {
 	for ps := range h.clients {
 		for _, receiver := range ps.peerConnection.GetReceivers() {
 			if receiver.Track() == nil {
-				log.Printf("dispatchKeyFrame Track nil C: %s", ps.client.userName)
 				continue
 			}
 			_ = ps.peerConnection.WriteRTCP([]rtcp.Packet{
@@ -244,22 +282,15 @@ func dispatchKeyFrame(h *SSEHub) {
 		}
 	}
 }
-func sendDataChannelMessage(h *SSEHub, message ReceivedDataChannelMessage) {
-	for ps := range h.clients {
-		if ps.client.userName != message.UserName {
-			ps.channels.SendMessage(message)
-		}
-	}
-}
-func sendClientNames(h *SSEHub) {
+func sendCurrentClientNames(h *SSEHub) {
 	names := ClientNames{
 		Names: make([]ClientName, len(h.clients)),
 	}
 
 	i := 0
-	for ps := range h.clients {
+	for pc := range h.clients {
 		names.Names[i] = ClientName{
-			Name: ps.client.userName,
+			Name: pc.client.userName,
 		}
 		i += 1
 	}
@@ -268,9 +299,9 @@ func sendClientNames(h *SSEHub) {
 		log.Printf("Error sendClientNames Message: %s", err.Error())
 		return
 	}
-	for ps := range h.clients {
-		flusher, _ := ps.client.w.(http.Flusher)
-		fmt.Fprintf(ps.client.w, "data: %s\n\n", message)
+	for pc := range h.clients {
+		flusher, _ := pc.client.w.(http.Flusher)
+		fmt.Fprintf(pc.client.w, "data: %s\n\n", message)
 		flusher.Flush()
 	}
 }

@@ -43,6 +43,7 @@ func main() {
 	defer func() {
 		groups.close <- 0
 	}()
+	go groups.Run()
 
 	http.Handle(fmt.Sprintf("%s/css/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
 	http.Handle(fmt.Sprintf("%s/js/", urlPrefix), http.StripPrefix(fmt.Sprintf("%s", urlPrefix), http.FileServer(http.Dir("templates"))))
@@ -58,9 +59,10 @@ func main() {
 		sendSSEMessage(w, r, hub)
 	})
 	http.HandleFunc(fmt.Sprintf("%s/sse/", urlPrefix), func(w http.ResponseWriter, r *http.Request) {
-		groupName, err := GetParam(r, "groupName")
+		groupName, err := GetParam(r, "group")
 		if err != nil {
 			log.Println(err.Error())
+			http.Error(w, "Missing or invalid groupname parameter", http.StatusBadRequest)
 			return
 		}
 		hub := groups.GetOrCreateRoom(groupName)

@@ -4,6 +4,10 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
+const (
+	HeartBeatChID = 54
+)
+
 type WebRTCDataChannelStates struct {
 	DataChannels map[uint16]*webrtc.DataChannel
 	MessageCh    chan WebRTCDataChannelMessage

@@ -44,7 +44,7 @@ func (groups *ChatGroups) GetOrCreateRoom(name string) *SSEHub {
 }
 func (groups *ChatGroups) Close() {
 	for _, r := range groups.rooms {
-		r.close()
+		r.CloseSSEHub()
 	}
 	close(groups.register)
 	close(groups.unregister)

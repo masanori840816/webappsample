@@ -16,6 +16,7 @@ const (
 	UpdateEvent     string = "update"
 	ClientNameEvent string = "clientName"
 	HeartbeatEvent  string = "heartbeat"
+	ErrorEvent      string = "error"
 )
 
 type ClientMessage struct {
@@ -101,4 +102,16 @@ func NewHeartbeatMessageJSON() string {
 		return ""
 	}
 	return string(jsonValue)
+}
+
+func NewErrorMessageJSON(message string) string {
+	faildMessage := ClientMessage{
+		MessageType: ErrorEvent,
+		Data:        message,
+	}
+	resultJson, err := json.Marshal(faildMessage)
+	if err != nil {
+		return ""
+	}
+	return string(resultJson)
 }
