@@ -54,16 +54,16 @@ func main() {
 			w.Write(j)
 			return
 		}
-		hub := groups.GetOrCreateRoom(message.Target)
+		hub := groups.GetOrCreateRoom(message.GroupName)
 		sendSSEMessage(w, r, hub)
 	})
 	http.HandleFunc(fmt.Sprintf("%s/sse/", urlPrefix), func(w http.ResponseWriter, r *http.Request) {
-		roomName, err := GetParam(r, "target")
+		groupName, err := GetParam(r, "groupName")
 		if err != nil {
 			log.Println(err.Error())
 			return
 		}
-		hub := groups.GetOrCreateRoom(roomName)
+		hub := groups.GetOrCreateRoom(groupName)
 		registerSSEClient(w, r, hub)
 	})
 	http.Handle("/", &templateHandler{filename: "index.html", settings: settings})

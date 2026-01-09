@@ -21,7 +21,7 @@ const (
 type ClientMessage struct {
 	MessageType string `json:"event"`
 	UserName    string `json:"userName"`
-	Target      string `json:"target"`
+	GroupName   string `json:"groupName"`
 	Data        string `json:"data"`
 }
 
