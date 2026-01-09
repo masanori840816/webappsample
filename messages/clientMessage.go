@@ -1,4 +1,4 @@
-package main
+package messages
 
 import (
 	"encoding/json"
@@ -16,6 +16,8 @@ const (
 	UpdateEvent     string = "update"
 	ClientNameEvent string = "clientName"
 	HeartbeatEvent  string = "heartbeat"
+	PhotoEvent      string = "photo"
+	PhotoPropsEvent string = "photoprops"
 	ErrorEvent      string = "error"
 )
 

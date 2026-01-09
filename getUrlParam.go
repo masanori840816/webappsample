@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	messages "webappsample/messages"
 )
 
 func GetParam(r *http.Request, key string) (string, error) {
@@ -15,8 +16,8 @@ func GetParam(r *http.Request, key string) (string, error) {
 	return result, nil
 }
 
-func GetClientMessage(w http.ResponseWriter, r *http.Request) (*ClientMessage, error) {
-	message := &ClientMessage{}
+func GetClientMessage(w http.ResponseWriter, r *http.Request) (*messages.ClientMessage, error) {
+	message := &messages.ClientMessage{}
 	err := json.NewDecoder(r.Body).Decode(message)
 	if err != nil {
 		log.Printf("Failed converting to ClientMessage: %s", err.Error())

@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"github.com/pion/webrtc/v4"
+
+	messages "webappsample/messages"
 )
 
 type SSEClient struct {
@@ -19,13 +21,6 @@ func newSSEClient(userName string, w http.ResponseWriter) *SSEClient {
 		userName: userName,
 		w:        w,
 	}
-}
-
-type ClientName struct {
-	Name string `json:"name"`
-}
-type ClientNames struct {
-	Names []ClientName `json:"names"`
 }
 
 func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
@@ -81,7 +76,7 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 		// handle PeerConnection events and close SSE event.
 		select {
 		case candidate := <-ps.candidateFound:
-			jsonValue, err := NewCandidateMessageJSON(newClient.userName, candidate)
+			jsonValue, err := messages.NewCandidateMessageJSON(newClient.userName, candidate)
 			if err != nil {
 				log.Println(err.Error())
 				return
@@ -131,14 +126,14 @@ func registerSSEClient(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
 }
 func rejectConnection(w http.ResponseWriter, r *http.Request, message string) {
 	flusher, _ := w.(http.Flusher)
-	_, _ = fmt.Fprintf(w, "data: %s\n\n", NewErrorMessageJSON(message))
+	_, _ = fmt.Fprintf(w, "data: %s\n\n", messages.NewErrorMessageJSON(message))
 	flusher.Flush()
 	for range r.Context().Done() {
 		// when "es.close()" is called, this loop operation will be ended.
 		return
 	}
 }
-func SendSSEMessage(w http.ResponseWriter, hub *SSEHub, message *ClientMessage) {
+func SendSSEMessage(w http.ResponseWriter, hub *SSEHub, message *messages.ClientMessage) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 	hub.broadcast <- *message

@@ -12,12 +12,14 @@ import (
 
 	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
+
+	messages "webappsample/messages"
 )
 
 type SSEHub struct {
 	name                        string
 	clients                     map[*PeerConnectionState]bool
-	broadcast                   chan ClientMessage
+	broadcast                   chan messages.ClientMessage
 	register                    chan *PeerConnectionState
 	unregister                  chan *PeerConnectionState
 	trackLocals                 map[string]*webrtc.TrackLocalStaticRTP
@@ -33,7 +35,7 @@ func NewSSEHub(name string) *SSEHub {
 	return &SSEHub{
 		name:                        name,
 		clients:                     make(map[*PeerConnectionState]bool),
-		broadcast:                   make(chan ClientMessage),
+		broadcast:                   make(chan messages.ClientMessage),
 		register:                    make(chan *PeerConnectionState),
 		unregister:                  make(chan *PeerConnectionState),
 		trackLocals:                 map[string]*webrtc.TrackLocalStaticRTP{},
@@ -49,7 +51,7 @@ func (h *SSEHub) CloseSSEHub() {
 	close(h.broadcastDataChannelMessage)
 }
 func (h *SSEHub) run(unregister chan *SSEHub) {
-	heartbeatMessage := NewHeartbeatMessageJSON()
+	heartbeatMessage := messages.NewHeartbeatMessageJSON()
 	keyFrameTicker := time.NewTicker(time.Second * 3)
 	heartbeat := time.NewTicker(time.Minute)
 	defer func() {
@@ -134,9 +136,9 @@ func updateTrackValue(h *SSEHub, track *webrtc.TrackRemote) {
 		}
 	}
 }
-func handleReceivedMessage(h *SSEHub, message ClientMessage) {
+func handleReceivedMessage(h *SSEHub, message messages.ClientMessage) {
 	switch message.MessageType {
-	case TextEvent:
+	case messages.TextEvent:
 		m, _ := json.Marshal(message)
 		jsonText := string(m)
 
@@ -145,7 +147,7 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 			fmt.Fprintf(client.client.w, "data: %s\n\n", jsonText)
 			flusher.Flush()
 		}
-	case CandidateEvent:
+	case messages.CandidateEvent:
 		candidate, err := parseICECandidate(message.Data)
 		if err != nil {
 			log.Println(err)
@@ -159,7 +161,7 @@ func handleReceivedMessage(h *SSEHub, message ClientMessage) {
 				}
 			}
 		}
-	case AnswerEvent:
+	case messages.AnswerEvent:
 		answer := webrtc.SessionDescription{}
 		if err := json.Unmarshal([]byte(message.Data), &answer); err != nil {
 			log.Println(err)
@@ -253,7 +255,7 @@ func attemptSync(h *SSEHub) bool {
 		if err != nil {
 			return true
 		}
-		messageJSON, err := NewOfferMessageJSON(ps.client.userName, offer)
+		messageJSON, err := messages.NewOfferMessageJSON(ps.client.userName, offer)
 		if err != nil {
 			return true
 		}
@@ -283,18 +285,18 @@ func dispatchKeyFrame(h *SSEHub) {
 	}
 }
 func sendCurrentClientNames(h *SSEHub) {
-	names := ClientNames{
-		Names: make([]ClientName, len(h.clients)),
+	names := messages.ClientNames{
+		Names: make([]messages.ClientName, len(h.clients)),
 	}
 
 	i := 0
 	for pc := range h.clients {
-		names.Names[i] = ClientName{
+		names.Names[i] = messages.ClientName{
 			Name: pc.client.userName,
 		}
 		i += 1
 	}
-	message, err := NewClientNameMessageJSON(names)
+	message, err := messages.NewClientNameMessageJSON(names)
 	if err != nil {
 		log.Printf("Error sendClientNames Message: %s", err.Error())
 		return
