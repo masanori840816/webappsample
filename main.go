@@ -56,7 +56,7 @@ func main() {
 			return
 		}
 		hub := groups.GetOrCreateRoom(message.GroupName)
-		sendSSEMessage(w, r, hub)
+		SendSSEMessage(w, hub, message)
 	})
 	http.HandleFunc(fmt.Sprintf("%s/sse/", urlPrefix), func(w http.ResponseWriter, r *http.Request) {
 		groupName, err := GetParam(r, "group")

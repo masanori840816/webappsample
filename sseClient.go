@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 
@@ -139,25 +138,8 @@ func rejectConnection(w http.ResponseWriter, r *http.Request, message string) {
 		return
 	}
 }
-func sendSSEMessage(w http.ResponseWriter, r *http.Request, hub *SSEHub) {
+func SendSSEMessage(w http.ResponseWriter, hub *SSEHub, message *ClientMessage) {
 	w.Header().Set("Content-Type", "application/json")
-	body, err := io.ReadAll(r.Body)
-
-	if err != nil {
-		log.Println(err.Error())
-		j, _ := json.Marshal(GetFailed("Failed reading values from body"))
-		w.Write(j)
-		return
-	}
-	message := &ClientMessage{}
-	err = json.Unmarshal(body, &message)
-	if err != nil {
-		log.Println(err.Error())
-		j, _ := json.Marshal(GetFailed("Failed converting to ClientMessage"))
-
-		w.Write(j)
-		return
-	}
 	w.WriteHeader(200)
 	hub.broadcast <- *message
 	data, _ := json.Marshal(GetSucceeded())
