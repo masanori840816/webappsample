@@ -1,5 +1,5 @@
 export function captureVideo(video: HTMLVideoElement, outputImage: HTMLImageElement): boolean {
-    const canvas = document.createElement("canvas");
+    const canvas = document.getElementById("video-capture-canvas") as HTMLCanvasElement;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
@@ -14,4 +14,22 @@ export function captureVideo(video: HTMLVideoElement, outputImage: HTMLImageElem
         return true;
     }
     return false;
+}
+export function savePhoto(callback: ((pohtoData: Uint8Array) => void)) {
+    const canvas = document.getElementById("video-capture-canvas") as HTMLCanvasElement;
+    const context = canvas.getContext("2d");
+    if(context == null) {
+        console.error("Failed to get the Canvas Context");
+        return;
+    }
+    // TODO: add drawn lines, images, etc.
+    canvas.toBlob(async (b) => {
+        if(b == null) {
+            console.error("Failed to convert to Blob");
+            return;
+        }
+        const result = new Uint8Array(await b.arrayBuffer());
+        console.log(b);
+        callback(result);
+    });
 }

@@ -139,14 +139,10 @@ func updateTrackValue(h *SSEHub, track *webrtc.TrackRemote) {
 func handleReceivedMessage(h *SSEHub, message messages.ClientMessage) {
 	switch message.MessageType {
 	case messages.TextEvent:
-		m, _ := json.Marshal(message)
-		jsonText := string(m)
+		shareReceivedStringValue(h, message)
 
-		for client := range h.clients {
-			flusher, _ := client.client.w.(http.Flusher)
-			fmt.Fprintf(client.client.w, "data: %s\n\n", jsonText)
-			flusher.Flush()
-		}
+	case messages.PhotoEvent:
+		shareReceivedStringValue(h, message)
 	case messages.CandidateEvent:
 		candidate, err := parseICECandidate(message.Data)
 		if err != nil {
@@ -175,6 +171,19 @@ func handleReceivedMessage(h *SSEHub, message messages.ClientMessage) {
 				}
 			}
 		}
+	}
+}
+func shareReceivedStringValue(h *SSEHub, message messages.ClientMessage) {
+	m, _ := json.Marshal(message)
+	jsonText := string(m)
+
+	for client := range h.clients {
+		if client.client.userName == message.UserName {
+			continue
+		}
+		flusher, _ := client.client.w.(http.Flusher)
+		fmt.Fprintf(client.client.w, "data: %s\n\n", jsonText)
+		flusher.Flush()
 	}
 }
 func parseICECandidate(value string) (webrtc.ICECandidateInit, error) {

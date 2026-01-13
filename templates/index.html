@@ -36,6 +36,22 @@
             </div>
             <div id="received_datachannel_area"></div>
         </div>
+
+
+        <div class="video-area">
+            <video class="w-full h-full" 
+                id="remote_video"
+                src="{{.URL}}/videos/sample.mp4" loop controls>Video stream not available.</video>
+        </div>
+        <div class="w-[50vw] h-[10vh] bg-amber-100 flex flex-row align-middle justify-around">
+            <button class="w-1/4 h-1/4 border-solid border-black border[1px]" onclick="Page.capture()">Capture</button>
+        </div>
+        <div><canvas id="video-capture-canvas"></canvas></div>
+        <div >
+            <img id="captured_image" onclick="VideoPage.mark()">
+        </div>
+
+
         <script src="{{.URL}}/js/main.page.js"></script>
         <script>Page.init('{{.URL}}', '{{.ICEServerJSON}}');</script>
     </body>

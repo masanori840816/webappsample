@@ -4,12 +4,16 @@ import { SseController } from "./sse.controller";
 import { removeVideoCodec } from "./videoCodecs/videoCodecRemover";
 import { WebRtcController } from "./webrtc.controller";
 import { ClientMessage, ICEServer } from "./webrtc.type";
+import * as videoCapture from "./videoCaptures/videoimageeditor";
+import { toBase64 } from "./videoCaptures/blobConverter";
 
 let sse: SseController;
 let webrtc: WebRtcController;
 let view: MainView;
 let userName = ""
 let iceServer: ICEServer;
+
+let captured = false;
 // TODO: get from the page
 const targetSample = "sample";
 window.Page = {
@@ -50,7 +54,33 @@ window.Page = {
     sendTextDataChannel() {
         const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
         webrtc.sendTextDataChannel(messageInput.value);
-    }
+    },
+    capture() {
+        const video = document.getElementById("remote_video") as HTMLVideoElement;
+        const outputImage = document.getElementById("captured_image") as HTMLImageElement;
+        const captureResult = videoCapture.captureVideo(video, outputImage);
+        if(captureResult !== true) {
+            alert("failed capturing");
+            return;
+        }
+        captured = true;
+        console.log("OK");
+        videoCapture.savePhoto((photoData) => {
+            if(captured !== true) {
+                return;
+            }
+            console.log("video capture send");
+            console.log(photoData);
+            
+            sse.sendMessage({
+                event: "photo",
+                userName, 
+                groupName: targetSample, 
+                data: toBase64(photoData)
+            });
+        });
+    },
+
 };
 function handleReceivedMessage(value: string) {
     const message = JSON.parse(value);
@@ -84,6 +114,9 @@ function handleReceivedMessage(value: string) {
             break;
         case "heartbeat":
             // Do nothing
+            break;
+        case "photo":
+            console.log(`recevie photo ${message.data}`);
             break;
         default:
             console.error(`Invalid message type ${value}`);            

@@ -9,7 +9,8 @@ export interface MainPageApi {
     send: () => void,
     close: () => void,
     init: (url: string, iceServerJSON: string) => void,
-    sendTextDataChannel: () => void
+    sendTextDataChannel: () => void,
+    capture: () => void,
 }
 export interface VideoEditPageApi {
     capture: () => void,
