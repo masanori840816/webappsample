@@ -4,12 +4,13 @@ import { SseController } from "./sse.controller";
 import { removeVideoCodec } from "./videoCodecs/videoCodecRemover";
 import { WebRtcController } from "./webrtc.controller";
 import { ClientMessage, ICEServer } from "./webrtc.type";
-import * as videoCapture from "./videoCaptures/videoimageeditor";
 import { toBase64 } from "./videoCaptures/blobConverter";
+import { VideoCaptureEditor } from "./videoCaptures/videoCaptureEditor";
 
 let sse: SseController;
 let webrtc: WebRtcController;
 let view: MainView;
+let videoCapture: VideoCaptureEditor;
 let userName = ""
 let iceServer: ICEServer;
 
@@ -49,6 +50,7 @@ window.Page = {
             (stream, kind) => view.addRemoteTrack(stream, kind),
             (id, kind) => view.removeRemoteTrack(id, kind));
         webrtc.init(view.checkLocalVideoUsed());
+        videoCapture = new VideoCaptureEditor();
         view.addEvents((used) => webrtc.switchLocalVideoUsage(used));
     },
     sendTextDataChannel() {
@@ -56,22 +58,18 @@ window.Page = {
         webrtc.sendTextDataChannel(messageInput.value);
     },
     capture() {
-        const video = document.getElementById("remote_video") as HTMLVideoElement;
-        const outputImage = document.getElementById("captured_image") as HTMLImageElement;
-        const captureResult = videoCapture.captureVideo(video, outputImage);
+        const video = document.getElementById("remote-video") as HTMLVideoElement;
+        const outputImage = document.getElementById("captured-image") as HTMLImageElement;
+        const captureResult = videoCapture.capture(video, outputImage);
         if(captureResult !== true) {
             alert("failed capturing");
             return;
         }
         captured = true;
-        console.log("OK");
-        videoCapture.savePhoto((photoData) => {
+        videoCapture.savePhoto(outputImage, (photoData) => {
             if(captured !== true) {
                 return;
             }
-            console.log("video capture send");
-            console.log(photoData);
-            
             sse.sendMessage({
                 event: "photo",
                 userName, 

@@ -9,7 +9,7 @@
         <h1>Video Edit Sample</h1>
         <div class="video-area">
             <video class="w-full h-full" 
-                id="remote_video"
+                id="remote-video"
                 src="{{.URL}}/videos/sample.mp4" loop controls>Video stream not available.</video>
         </div>
         <div class="w-[50vw] h-[10vh] bg-amber-100 flex flex-row align-middle justify-around">
@@ -17,7 +17,7 @@
             <button class="w-1/4 h-1/4 border-solid border-black border[1px]" onclick="VideoPage.download()">Download</button>
         </div>
         <div id="captured-image-container">
-            <img id="captured_image">
+            <img id="captured-image">
         </div>
         <script src="{{.URL}}/js/videoedit.page.js"></script>
         <script>VideoPage.init();</script>
