@@ -1,25 +1,32 @@
-import * as videoCapture from "./videoCaptures/videoimageeditor";
+import { VideoCaptureEditor } from "./videoCaptures/videoCaptureEditor";
+
 
 let captured = false;
+let outputImage: HTMLImageElement;
+let videoCapture: VideoCaptureEditor;
 window.VideoPage = {
+    init() {
+        videoCapture = new VideoCaptureEditor();
+        outputImage = document.getElementById("captured_image") as HTMLImageElement;
+        outputImage.addEventListener("click", (ev) => {
+            console.log(ev);
+            if(captured !== true) {
+                return;
+            }
+            videoCapture.mark(ev, document.getElementById("captured_image") as HTMLImageElement);
+            console.log("mark");
+        });
+    },
     capture() {
         const video = document.getElementById("remote_video") as HTMLVideoElement;
-        const outputImage = document.getElementById("captured_image") as HTMLImageElement;
-        const captureResult = videoCapture.captureVideo(video, outputImage);
+        const captureResult = videoCapture.capture(video, outputImage);
         if(captureResult !== true) {
             alert("failed capturing");
             return;
         }
         captured = true;
-        console.log("OK");
     },
     download() {
-        console.log("donwloadfile");
-    },
-    mark() {
-        if(captured !== true) {
-            return;
-        }
-        console.log("mark");
+        videoCapture.savePhoto(outputImage, (photoData) => console.log(photoData));
     }
 }

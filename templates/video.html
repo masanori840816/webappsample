@@ -14,12 +14,13 @@
         </div>
         <div class="w-[50vw] h-[10vh] bg-amber-100 flex flex-row align-middle justify-around">
             <button class="w-1/4 h-1/4 border-solid border-black border[1px]" onclick="VideoPage.capture()">Capture</button>
+            <button class="w-1/4 h-1/4 border-solid border-black border[1px]" onclick="VideoPage.download()">Download</button>
         </div>
-        <div><canvas id="video-capture-canvas"></canvas></div>
-        <div >
-            <img id="captured_image" onclick="VideoPage.mark()">
+        <div id="captured-image-container">
+            <img id="captured_image">
         </div>
         <script src="{{.URL}}/js/videoedit.page.js"></script>
+        <script>VideoPage.init();</script>
     </body>
 
 </html>

@@ -13,7 +13,7 @@ export interface MainPageApi {
     capture: () => void,
 }
 export interface VideoEditPageApi {
+    init: () => void,
     capture: () => void,
     download: () => void,
-    mark: () => void,
 }
