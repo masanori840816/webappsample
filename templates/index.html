@@ -41,18 +41,24 @@
         </div>
         <div id="received_datachannel_area"></div>
     </div>
-
-
+    
     <div class="video-area">
         <video class="w-full h-full" id="remote-video" src="{{.URL}}/videos/sample.mp4" loop controls>Video stream not
             available.</video>
     </div>
     <div id="capture-editor-area"
-        class="fixed inset-0 w-screen h-screen z-[9] bg-black/70 flex items-center justify-center">
+        class="fixed inset-0 w-screen h-screen z-9 bg-black/70 flex items-center justify-center">
         <div id="capture-editor-window"
             class="flex flex-col items-center justify-around w-[90%] h-[90%] bg-white rounded-lg">
-            <img id="captured-image" onclick="VideoPage.mark()">
-            <button class="w-[8vw] h-[6vh] border-solid border-black border[1px]">SendCapture</button>
+            <div class="w-full h-[5%] flex flex-row-reverse">
+                <button class="bg-red-500 text-white text-2xl w-[5%] rounded-lg" onclick="Page.closeEditorWindow()">×</button>
+            </div>
+            <div id="captured-image-container" class="w-full h-[85%]" >
+                <img id="captured-image">
+                <div id="marking-capture-area"></div>>
+            </div>
+            <button class="w-[8vw] h-[6vh] border-solid border-black border[1px] rounded-lg"
+             onclick="Page.sendPhoto()">SendCapture</button>
         </div>
     </div>
 

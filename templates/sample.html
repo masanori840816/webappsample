@@ -1,21 +1,32 @@
 <!DOCTYPE html>
 <html>
 
-<head>
-    <title>WebRTC Sample</title>
-    <meta charset="utf-8">
-    <link href="css/site.css" rel="stylesheet" />
-</head>
+    <head>
+        <title>WebRTC Sample</title>
+        <meta charset="utf-8">
+        <link href="css/site.css" rel="stylesheet" />
+    </head>
+    <body class="m-0 p-0 h[100vh] w[100vw]">
+        <header class="w-full h-[10vh] bg-gray-100 flex flex-row items-center justify-around">
+            <div class="h-11/12 w-[20%]">
+                <div class="w-full">User Name</div>
+                <input type="text" id="user-name" placeholder="User Name" value="user_example"
+                class="border border-solid border-black w-full h-10">
+            </div> 
+            <div class="h-11/12 w-[20%]">
+                <div class="w-full">Group Name</div>
+                <input type="text" id="group-name" placeholder="Group Name" value="group_example"
+                class="border border-solid border-black w-full h-10">
+            </div>
+            <div class="w-[20%] h-11/12 flex flex-row items-center justify-between">
+                <button class="w-[42%] h-2/3 border border-solid border-black rounded-lg" onclick="Page.connect()">Connect</button>
+                <button class="w-[42%] h-2/3 border border-solid border-black rounded-lg bg-red-500" onclick="Page.close()">Close</button>
+            </div>
+            <div class="w-[20%] h-11/12 flex flex-row items-center justify-between">
+                <button class="w-[42%] h-2/3 border border-solid border-black rounded-lg" onclick="Page.capture()">Capture</button>
 
-<body class="m-0 p-0 h[100vh] w[100vw]">
-    <header class="w-full h-[10vh] bg-gray-100 flex flex-row align-middle justify-around">
-        <h1>WebRTC Sample</h1>
-        <input type="text" id="user_name" placeholder="User Name">
-        <input type="text" id="group_name" placeholder="Group Name">
-        <button onclick="Page.connect()">Connect</button>
+            </div>
         <button onclick="Page.send()">Send</button>
-        <button onclick="Page.close()">Close</button>
-        <button class="w-1/4 h-1/4 border-solid border-black border[1px]" onclick="Page.capture()">Capture</button>
     </header>
 
     <div id="sample_message"></div>
@@ -47,11 +58,16 @@
             available.</video>
     </div>
     <div id="capture-editor-area"
-        class="fixed inset-0 w-screen h-screen z-[9] bg-black/70 flex items-center justify-center">
+        class="fixed inset-0 w-screen h-screen z-9 bg-black/70 flex items-center justify-center">
         <div id="capture-editor-window"
             class="flex flex-col items-center justify-around w-[90%] h-[90%] bg-white rounded-lg">
-            <img id="captured-image" onclick="VideoPage.mark()">
-            <button class="w-[8vw] h-[6vh] border-solid border-black border[1px]">SendCapture</button>
+            <div class="w-full h-[5%] flex flex-row-reverse">
+                <button class="bg-red-500 text-white text-2xl w-[5%] rounded-lg">×</button>
+            </div>
+            <div id="captured-image-container" class="w-full h-[85%]" >
+                <img id="captured-image" onclick="VideoPage.mark()">
+            </div>
+            <button class="w-[8vw] h-[6vh] border-solid border-black border[1px] rounded-lg">SendCapture</button>
         </div>
     </div>
 </body>

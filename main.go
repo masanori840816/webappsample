@@ -69,6 +69,8 @@ func main() {
 		registerSSEClient(w, r, hub)
 	})
 	http.Handle("/", &templateHandler{filename: "index.html", settings: settings})
+
+	http.Handle("/pages", &templateHandler{filename: "index.html", settings: settings})
 	http.Handle("/video", &templateHandler{filename: "video.html", settings: settings})
 	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 }

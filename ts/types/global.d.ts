@@ -11,6 +11,8 @@ export interface MainPageApi {
     init: (url: string, iceServerJSON: string) => void,
     sendTextDataChannel: () => void,
     capture: () => void,
+    sendPhoto: () => void,
+    closeEditorWindow: () => void,
 }
 export interface VideoEditPageApi {
     init: () => void,

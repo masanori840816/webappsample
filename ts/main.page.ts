@@ -13,23 +13,25 @@ let view: MainView;
 let videoCapture: VideoCaptureEditor;
 let userName = ""
 let iceServer: ICEServer;
+let capturedImage: HTMLImageElement;
 
 let captured = false;
-// TODO: get from the page
-const targetSample = "sample";
+let groupName = "group_sample";
 window.Page = {
     connect(): void {
-        const userNameInput = document.getElementById("user_name") as HTMLInputElement;
+        const userNameInput = document.getElementById("user-name") as HTMLInputElement;
         userName = userNameInput.value;
+        const groupNameInput = document.getElementById("group-name") as HTMLInputElement;
+        groupName = groupNameInput.value;
         webrtc.connect(iceServer);
-        sse.connect(userName, targetSample);
+        sse.connect(userName, groupName);
     },
     send() {
         if(!hasAnyTexts(userName)) {
             return;
         }
         const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
-        sse.sendMessage({ event: "text", userName, groupName: targetSample, data: messageInput.value });
+        sse.sendMessage({ event: "text", userName, groupName, data: messageInput.value });
     },
     close() {
         userName = "";
@@ -37,6 +39,10 @@ window.Page = {
         sse.close();
     },
     init(url: string, iceServerJSON: string) {
+        
+        const captureEditorArea = document.getElementById("capture-editor-area") as HTMLElement;
+        captureEditorArea.style.display = "none";
+
         iceServer = JSON.parse(iceServerJSON);       
         sse = new SseController(url);
         sse.addEvents((value) => handleReceivedMessage(value));
@@ -51,7 +57,13 @@ window.Page = {
             (id, kind) => view.removeRemoteTrack(id, kind));
         webrtc.init(view.checkLocalVideoUsed());
         videoCapture = new VideoCaptureEditor();
-        view.addEvents((used) => webrtc.switchLocalVideoUsage(used));
+        capturedImage = document.getElementById("captured-image") as HTMLImageElement;
+        capturedImage.addEventListener("click", (ev) => {
+            if(captured !== true) {
+                return;
+            }
+            videoCapture.mark(ev, capturedImage);
+        });
     },
     sendTextDataChannel() {
         const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
@@ -59,26 +71,33 @@ window.Page = {
     },
     capture() {
         const video = document.getElementById("remote-video") as HTMLVideoElement;
-        const outputImage = document.getElementById("captured-image") as HTMLImageElement;
-        const captureResult = videoCapture.capture(video, outputImage);
+        const captureResult = videoCapture.capture(video, capturedImage);
         if(captureResult !== true) {
             alert("failed capturing");
             return;
         }
+        const captureEditorArea = document.getElementById("capture-editor-area") as HTMLElement;
+        captureEditorArea.style.display = "flex";
         captured = true;
-        videoCapture.savePhoto(outputImage, (photoData) => {
+        
+    },
+    sendPhoto() {
+        videoCapture.savePhoto(capturedImage, (photoData) => {
             if(captured !== true) {
                 return;
             }
             sse.sendMessage({
                 event: "photo",
                 userName, 
-                groupName: targetSample, 
+                groupName: groupName, 
                 data: toBase64(photoData)
             });
         });
     },
-
+    closeEditorWindow() {
+        const captureEditorArea = document.getElementById("capture-editor-area") as HTMLElement;
+        captureEditorArea.style.display = "none";
+    },
 };
 function handleReceivedMessage(value: string) {
     const message = JSON.parse(value);
@@ -125,13 +144,13 @@ function sendAnswer(data: RTCSessionDescriptionInit) {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: "answer", groupName: targetSample, data: JSON.stringify(data)});
+    sse.sendMessage({userName, event: "answer", groupName, data: JSON.stringify(data)});
 }
 function sendCandidate(data: RTCIceCandidate) {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: "candidate", groupName: targetSample, data: JSON.stringify(data)});
+    sse.sendMessage({userName, event: "candidate", groupName, data: JSON.stringify(data)});
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function checkIsClientMessage(value: any): value is ClientMessage {
@@ -152,5 +171,5 @@ function updateConnection() {
     if(!hasAnyTexts(userName)) {
         return;
     }
-    sse.sendMessage({userName, event: "update", groupName: targetSample, data: "{}"});
+    sse.sendMessage({userName, event: "update", groupName, data: "{}"});
 }

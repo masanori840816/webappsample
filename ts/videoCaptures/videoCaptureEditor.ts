@@ -1,13 +1,13 @@
 const MarkerSize = 60;
 export class VideoCaptureEditor {
     private canvas: HTMLCanvasElement;
-    private container: HTMLElement;
+    private markingArea: HTMLElement;
     private markerImg: HTMLImageElement;
     private markers: { x: number, y: number }[] = [];
 
     public constructor() {
         this.canvas = document.createElement("canvas");
-        this.container = document.getElementById("captured-image-container") as HTMLElement;
+        this.markingArea = document.getElementById("marking-capture-area") as HTMLElement;
         this.markerImg = new Image();
         this.markerImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
             <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
@@ -16,11 +16,19 @@ export class VideoCaptureEditor {
         `);
     }
     public capture(video: HTMLVideoElement, outputImage: HTMLImageElement): boolean {
+
+        for(const c of this.markingArea.children)
+        {
+            this.markingArea.removeChild(c);
+        }
+
         this.canvas.width = video.videoWidth;
         this.canvas.height = video.videoHeight;
-
         const context = this.canvas.getContext("2d");
         if (context != null) {
+            // clear last images
+            context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.markers = [];
             // capture current video frame
             context.drawImage(video, 0, 0, this.canvas.width, this.canvas.height);
             // create image
@@ -88,6 +96,6 @@ export class VideoCaptureEditor {
             top: `${topPos}px`,
             pointerEvents: 'none'
         });
-        this.container.appendChild(icon);
+        this.markingArea.appendChild(icon);
     }
 }
