@@ -5,15 +5,19 @@
   "main": "index.js",
   "scripts": {
     "build": "npm-run-all build:*",
-    "build:mainpage": "node ./esbuilds/mainpage.build.mjs"
+    "build:mainpage": "node ./esbuilds/mainpage.build.mjs",
+    "css": "npm-run-all css:*",
+    "css:mainpage": "npx @tailwindcss/cli -i ./tailwindcss/site.css -o ./templates/css/site.css --content ./templates/*.html"
   },
   "author": "Masui Masanori",
   "license": "MIT",
   "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "eslint": "^8.57.1",
     "npm-run-all": "^4.1.5",
+    "tailwindcss": "^4.1.18",
     "typescript": "^4.9.5"
   },
   "dependencies": {
