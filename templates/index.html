@@ -6,16 +6,18 @@
         <link href="{{.URL}}/css/site.css" rel="stylesheet" />
     </head>
     <body class="m-0 p-0 h[100vh] w[100vw]">
-        <input type="text" id="user_name" placeholder="User Name">
-        <div id="sample_message"></div>
-        <textarea id="input_message"></textarea>
-        <button onclick="Page.connect()">Connect</button>
-        <button onclick="Page.send()">Send</button>
-        <button onclick="Page.close()">Close</button>
-        <select id="video_codec_selector"></select>
-        <label for="force_video_codec_check">
-            <input type="checkbox" id="force_video_codec_check">force
-        </label>
+        <header class="flex flex-row items-center justify-around w-full h-16">
+            <input type="text" id="user_name" placeholder="User Name">
+            <div id="sample_message"></div>
+            <textarea id="input_message"></textarea>
+            <button onclick="Page.connect()">Connect</button>
+            <button onclick="Page.send()">Send</button>
+            <button onclick="Page.close()">Close</button>
+            <select id="video_codec_selector"></select>
+            <label for="force_video_codec_check">
+                <input type="checkbox" id="force_video_codec_check">force
+            </label>
+        </header>
         <div class="connected_clients_area" id="client_names">
         </div>
         <div id="received_text_area"></div>

@@ -1,7 +1,7 @@
 .vs
 .vscode
 templates/js/*
-!templates/js/volume-measurer-processor.js
+templates/css/*
 node_modules
 files/*
 *.log
