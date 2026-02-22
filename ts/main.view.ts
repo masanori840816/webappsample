@@ -15,7 +15,7 @@ export class MainView {
     private localVideoUsed: HTMLInputElement;
     private remoteTrackArea: HTMLElement;
     private tracks = new Array<RemoteTrack>();
-    private clientArea: HTMLElement;
+    private userNames: HTMLElement;
     private connectedClients: ConnectedClient[];
     private forceVideoCodecCheck: HTMLInputElement;
     private preferVideoCodecSelector: HTMLSelectElement;
@@ -31,7 +31,7 @@ export class MainView {
         this.localVideoUsed = document.getElementById("local_video_usage") as HTMLInputElement;
         this.localVideoUsed.checked = urlParam.getBoolParam("video");
         this.remoteTrackArea = document.getElementById("remote_track_area") as HTMLElement;
-        this.clientArea = document.getElementById("client_names") as HTMLElement;
+        this.userNames = document.getElementById("connected-user-list") as HTMLElement;
         this.connectedClients = new Array<ConnectedClient>();
         this.forceVideoCodecCheck = document.getElementById("force_video_codec_check") as HTMLInputElement;
         this.preferVideoCodecSelector = document.getElementById("video_codec_selector") as HTMLSelectElement;
@@ -107,7 +107,7 @@ export class MainView {
             if(names.names.some(n => n.name === clientName)) {
                 newClients.push(c);
             } else {
-                this.clientArea.removeChild(c.element);
+                this.userNames.removeChild(c.element);
             }
         }
         for(const n of names.names) {
@@ -115,7 +115,7 @@ export class MainView {
             if(this.connectedClients.some(c => c.name.name === clientName.name) === false) {
                 const newElement = document.createElement("div");
                 newElement.textContent = clientName.name;
-                this.clientArea.appendChild(newElement);
+                this.userNames.appendChild(newElement);
                 this.connectedClients.push({
                     name: clientName,
                     element: newElement,
