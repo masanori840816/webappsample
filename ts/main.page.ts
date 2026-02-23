@@ -48,7 +48,10 @@ window.Page = {
     sendTextDataChannel() {
         const messageInput = document.getElementById("input_message") as HTMLTextAreaElement;
         webrtc.sendTextDataChannel(messageInput.value);
-    }
+    },
+    switchUserList() {
+        view.switchUserList();
+    },
 };
 function handleReceivedMessage(value: string) {
     const message = JSON.parse(value);

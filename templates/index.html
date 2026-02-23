@@ -18,8 +18,9 @@
                 <input type="checkbox" id="force_video_codec_check">force
             </label>
             <div>
-                <button id="connected-user-names-menu-input" 
-                    class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg transition">
+                <button id="connected-user-names-menu-input"
+                    onclick="Page.switchUserList()"
+                    class="bg-white hover:bg-blue-500 px-4 py-2 rounded-lg transition">
                     Users(<span id="connected-user-count">0</span>)
                 </button>
                 <div id="connected-user-dropdown" 

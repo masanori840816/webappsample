@@ -15,6 +15,7 @@ export class MainView {
     private localVideoUsed: HTMLInputElement;
     private remoteTrackArea: HTMLElement;
     private tracks = new Array<RemoteTrack>();
+    private userNameWindow: HTMLElement;
     private userNames: HTMLElement;
     private connectedClients: ConnectedClient[];
     private forceVideoCodecCheck: HTMLInputElement;
@@ -31,6 +32,7 @@ export class MainView {
         this.localVideoUsed = document.getElementById("local_video_usage") as HTMLInputElement;
         this.localVideoUsed.checked = urlParam.getBoolParam("video");
         this.remoteTrackArea = document.getElementById("remote_track_area") as HTMLElement;
+        this.userNameWindow = document.getElementById("connected-user-dropdown") as HTMLElement;
         this.userNames = document.getElementById("connected-user-list") as HTMLElement;
         this.connectedClients = new Array<ConnectedClient>();
         this.forceVideoCodecCheck = document.getElementById("force_video_codec_check") as HTMLInputElement;
@@ -122,6 +124,10 @@ export class MainView {
                 });
             }
         }
+    }
+    public switchUserList() {
+        console.log("switchUserList");
+        this.userNameWindow.classList.toggle('hidden');
     }
     private getAudioTrack(target: HTMLElement|null|undefined): MediaStreamTrack|null {
         if(target == null ||

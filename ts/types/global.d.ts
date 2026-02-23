@@ -8,5 +8,6 @@ export interface MainPageApi {
     send: () => void,
     close: () => void,
     init: (url: string, iceServerJSON: string) => void,
-    sendTextDataChannel: () => void
+    sendTextDataChannel: () => void,
+    switchUserList: () => void,
 }
